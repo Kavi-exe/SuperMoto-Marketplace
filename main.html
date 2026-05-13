@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CeylonSuper</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--primary-yellow:#ffff00;
+--accent-black:#000000;
+--text-white:#ffffff;
+/* Background (darker grey live effect) */
+--dark-bg:rgb(197, 197, 197);
+--dark-surface:#111111;
+--dark-card:#222222;
+--dark-card2:#333333;
+--glass:rgba(255,255,255,0.05);
+
+--glass-border:rgba(255,255,255,0.14);
+
+/* Typography: make sure muted/secondary text remains readable on cards and dark surfaces */
+--text-primary:#f5f7ff;
+--text-secondary:#c7d1e0;
+--text-secondary-light:#e7edf7;
+--text-secondary-dark:#aab6c8;
+--text-muted:#9aa7b9;
+--text-muted-light:#e3e0e0;
+--text-muted-dark:#8e9aa9;
+
+/* Utility (some places use explicit blacks) */
+--text-on-dark:#0b0b0b;
+}
+body{background:var(--dark-bg);color:var(--text-primary);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--dark-bg)}::-webkit-scrollbar-thumb{background:var(--primary-yellow);border-radius:2px}
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border)}
+.logo{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent;cursor:pointer;letter-spacing:2px}
+.nav-links{display:flex;gap:2rem;align-items:center}
+.nav-link{color:var(--text-secondary-light);font-weight:500;font-size:0.9rem;cursor:pointer;transition:color 0.2s;letter-spacing:1px;text-transform:uppercase}
+.nav-link:hover,.nav-link.active{color:var(--primary-yellow)}
+.nav-btns{display:flex;gap:0.75rem;align-items:center}
+.btn{padding:0.5rem 1.25rem;border-radius:6px;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;transition:all 0.2s;letter-spacing:1px;text-transform:uppercase;border:none}
+.btn-ghost{background:transparent;border:1px solid var(--glass-border);color:var(--text-secondary-light)}
+.btn-ghost:hover{border-color:var(--primary-yellow);color:var(--primary-yellow)}
+.btn-primary{background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:var(--accent-black);font-weight:700}
+.btn-primary:hover{opacity:0.85;transform:translateY(-1px);box-shadow:0 18px 50px rgba(255,255,0,0.10),0 0 0 1px rgba(255,255,0,0.20),0 0 30px rgba(255,255,0,0.12)}
+.btn-primary:focus-visible{outline:2px solid rgba(255,255,0,0.7);outline-offset:3px}
+.btn-danger{background:linear-gradient(135deg,var(--accent-black),#333333);color:var(--text-white);font-weight:700}
+.btn-danger:hover{opacity:0.92;transform:translateY(-1px);box-shadow:0 18px 50px rgba(255,255,0,0.12),0 0 0 1px rgba(255,255,0,0.25),0 0 30px rgba(255,255,0,0.15)}
+.btn-danger:focus-visible{outline:2px solid rgba(255,255,0,0.7);outline-offset:3px}
+.btn-gold{background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:var(--accent-black);font-weight:700}
+/* Pages */
+.page{display:none;min-height:100vh;padding-top:64px}
+.page.active{display:block}
+/* Hero */
+.hero{position:relative;min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--dark-bg)}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(0,212,255,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 30%,rgba(255,45,85,0.08) 0%,transparent 60%),radial-gradient(ellipse at 50% 90%,rgba(0,80,120,0.15) 0%,transparent 50%)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.05) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 20s linear infinite}
+@keyframes gridMove{0%{background-position:0 0}100%{background-position:60px 60px}}
+.hero-content{position:relative;z-index:2;text-align:center;max-width:900px;padding:2rem}
+.hero-badge{display:inline-flex;align-items:center;gap:0.5rem;padding:0.4rem 1rem;border:1px solid var(--primary-yellow);border-radius:100px;font-size:0.75rem;color:var(--primary-yellow);letter-spacing:2px;text-transform:uppercase;margin-bottom:2rem;animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,0,0.3)}50%{box-shadow:0 0 20px 4px rgba(255,255,0,0.15)}}
+.hero-title{font-family:'Orbitron',monospace;font-size:clamp(2.5rem,6vw,5rem);font-weight:900;line-height:1.05;margin-bottom:1.5rem}
+.hero-title span{background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:1.15rem;color:var(--text-secondary-light);max-width:600px;margin:0 auto 2.5rem;line-height:1.7;font-weight:400}
+.hero-ctas{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.hero-stats{display:flex;gap:3rem;justify-content:center;margin-top:4rem;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat-num{font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:var(--primary-yellow)}
+.hero-stat-label{font-size:0.8rem;color:var(--text-muted-light);text-transform:uppercase;letter-spacing:2px;margin-top:0.25rem}
+/* Search bar */
+.search-bar{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:12px;padding:1.25rem 1.5rem;display:flex;gap:1rem;align-items:center;max-width:750px;margin:2rem auto 0;flex-wrap:wrap}
+.search-input{flex:1;min-width:200px;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:500}
+.search-input::placeholder{color:var(--text-muted-light)}
+.search-select{background:transparent;border:none;outline:none;color:var(--text-secondary-light);font-family:'Rajdhani',sans-serif;font-size:0.9rem;cursor:pointer;padding:0.25rem 0.5rem;border-left:1px solid var(--glass-border)}
+.search-select option{background:var(--dark-card);color:var(--text-primary)}
+/* Section */
+.section{padding:5rem 2rem}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2.5rem;flex-wrap:wrap;gap:1rem}
+.section-title{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:700}
+.section-title span{color:var(--primary-yellow)}
+.section-link{color:var(--primary-yellow);font-size:0.85rem;cursor:pointer;letter-spacing:1px;text-transform:uppercase}
+.container{max-width:1400px;margin:0 auto}
+/* Cards grid */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem}
+/* Vehicle card */
+.vehicle-card{background:rgba(17,17,17,0.75);border:1px solid var(--glass-border);border-radius:16px;overflow:hidden;cursor:pointer;transition:all 0.3s;position:relative}
+
+.vehicle-card:hover{transform:translateY(-6px);border-color:rgba(255,255,0,0.3);box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 30px rgba(255,255,0,0.08)}
+.card-img{width:100%;height:200px;object-fit:cover;display:block;background:linear-gradient(135deg,#0a1525,#0d1f35)}
+.card-img-placeholder{width:100%;height:200px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,#0a1525,#111827)}
+.card-badges{position:absolute;top:0.75rem;left:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap}
+.badge{padding:0.25rem 0.6rem;border-radius:6px;font-size:0.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-featured{background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:#000}
+.badge-premium{background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:#000}
+.badge-new{background:linear-gradient(135deg,var(--accent-black),#333);color:#fff}
+.badge-sold{background:#333;color:#666}
+.card-fav{position:absolute;top:0.75rem;right:0.75rem;width:32px;height:32px;background:rgba(0,0,0,0.6);border:1px solid var(--glass-border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all 0.2s}
+.card-fav:hover,.card-fav.active{border-color:var(--primary-yellow);color:var(--primary-yellow)}
+.card-body{padding:1.25rem}
+.card-title{font-family:'Orbitron',monospace;font-size:0.95rem;font-weight:700;margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-price{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:900;color:var(--primary-yellow);margin-bottom:0.75rem}
+.card-meta{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem}
+.card-meta-item{display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:var(--text-secondary-dark)}
+.card-seller{display:flex;align-items:center;justify-content:space-between;padding-top:0.75rem;border-top:1px solid var(--glass-border)}
+.card-seller-name{font-size:0.8rem;color:var(--text-muted-dark)}
+.card-location{font-size:0.78rem;color:var(--text-secondary-dark);display:flex;align-items:center;gap:0.3rem}
+/* Brands */
+.brands-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:1rem}
+.brand-card{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:12px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all 0.2s}
+.brand-card:hover{border-color:var(--primary-yellow);background:rgba(255,255,0,0.05)}
+.brand-icon{font-size:2rem;margin-bottom:0.5rem}
+.brand-name{font-size:0.75rem;color:var(--text-secondary-dark);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+/* Stats section */
+.stats-section{background:linear-gradient(135deg,rgba(255,255,0,0.05),rgba(0,0,0,0.05));border-top:1px solid var(--glass-border);border-bottom:1px solid var(--glass-border);padding:3rem 2rem;text-align:center}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:2rem;max-width:1000px;margin:0 auto}
+.stat-item{padding:1.5rem}
+.stat-num{font-family:'Orbitron',monospace;font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:0.85rem;color:var(--text-muted-light);text-transform:uppercase;letter-spacing:2px;margin-top:0.5rem}
+/* Testimonials */
+.testimonials{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+.testimonial{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:16px;padding:1.75rem;position:relative}
+.testimonial::before{content:'"';font-family:'Orbitron',monospace;font-size:5rem;color:rgba(255,255,0,0.1);position:absolute;top:0.5rem;left:1rem;line-height:1}
+.testimonial-text{color:var(--text-secondary-dark);line-height:1.7;font-size:0.95rem;margin-bottom:1.25rem;position:relative;z-index:1}
+.testimonial-author{display:flex;align-items:center;gap:0.75rem}
+.testimonial-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));color:#000}
+.testimonial-name{font-weight:600;font-size:0.9rem}
+.testimonial-vehicle{font-size:0.78rem;color:var(--text-muted-dark)}
+.stars{color:var(--primary-yellow);font-size:0.85rem;margin-bottom:0.75rem}
+/* Newsletter */
+.newsletter{background:linear-gradient(135deg,rgba(255,255,0,0.08),rgba(0,0,0,0.08));border:1px solid var(--glass-border);border-radius:20px;padding:3rem;text-align:center;max-width:600px;margin:0 auto}
+.newsletter h2{font-family:'Orbitron',monospace;font-size:1.5rem;margin-bottom:1rem}
+.newsletter p{color:var(--text-secondary-light);margin-bottom:1.5rem}
+.newsletter-form{display:flex;gap:0.75rem;max-width:400px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+.newsletter-input{flex:1;min-width:200px;padding:0.75rem 1rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.95rem;outline:none}
+.newsletter-input:focus{border-color:var(--primary-yellow)}
+/* Listings page */
+.listings-layout{display:grid;grid-template-columns:280px 1fr;gap:2rem;max-width:1400px;margin:0 auto;padding:2rem}
+.filters-panel{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:16px;padding:1.5rem;height:fit-content;position:sticky;top:80px}
+.filter-group{margin-bottom:1.5rem}
+.filter-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted-dark);margin-bottom:0.75rem;font-weight:600}
+.filter-input{width:100%;padding:0.6rem 0.75rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.9rem;outline:none}
+.filter-input:focus{border-color:var(--primary-yellow)}
+.filter-input option{background:var(--dark-card)}
+.filter-range{display:flex;gap:0.5rem}
+.filter-range input{width:100%;padding:0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.85rem;outline:none}
+.filter-chips{display:flex;flex-wrap:wrap;gap:0.5rem}
+.filter-chips-scroll{display:flex;gap:0.5rem;overflow-x:auto;padding-bottom:0.5rem;max-width:100%;scrollbar-width:thin;scrollbar-color:var(--primary-yellow) transparent}
+.filter-chips-scroll::-webkit-scrollbar{height:3px}
+.filter-chips-scroll::-webkit-scrollbar-track{background:transparent}
+.filter-chips-scroll::-webkit-scrollbar-thumb{background:var(--primary-yellow);border-radius:2px}
+.filter-chip{padding:0.3rem 0.75rem;border:1px solid var(--glass-border);border-radius:100px;font-size:0.78rem;cursor:pointer;transition:all 0.2s;color:var(--text-secondary-dark)}
+.filter-chip.active{border-color:var(--primary-yellow);color:var(--primary-yellow);background:rgba(255,255,0,0.08)}
+.listings-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.results-count{color:var(--text-secondary-light);font-size:0.9rem}
+.sort-select{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-secondary-light);padding:0.5rem 0.75rem;font-family:'Rajdhani',sans-serif;font-size:0.85rem;outline:none;cursor:pointer}
+.sort-select option{background:var(--dark-card);color:var(--text-primary)}
+/* Detail page */
+.detail-layout{display:grid;grid-template-columns:1fr 360px;gap:2rem;max-width:1300px;margin:0 auto;padding:2rem}
+.gallery-main{width:100%;height:400px;background:linear-gradient(135deg,#111111,#222222);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:6rem;margin-bottom:1rem;position:relative;overflow:hidden;border:1px solid var(--glass-border)}
+.gallery-thumbs{display:flex;gap:0.75rem;overflow-x:auto;padding-bottom:0.5rem}
+.gallery-thumb{width:80px;height:60px;background:var(--dark-card);border-radius:8px;cursor:pointer;flex-shrink:0;border:2px solid transparent;display:flex;align-items:center;justify-content:center;font-size:1.5rem;transition:all 0.2s}
+.gallery-thumb.active,.gallery-thumb:hover{border-color:var(--primary-yellow)}
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.25rem}
+.spec-item{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:10px;padding:0.85rem 1rem}
+.spec-key{font-size:0.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted-dark);margin-bottom:0.3rem;font-weight:600}
+.spec-val{font-size:1rem;font-weight:600;color:var(--text-primary)}
+.seller-card{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:16px;padding:1.5rem;position:sticky;top:80px}
+.seller-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:900;color:#000;margin-bottom:1rem}
+.seller-name{font-size:1.1rem;font-weight:700;margin-bottom:0.25rem}
+.seller-rating{color:var(--primary-yellow);font-size:0.85rem;margin-bottom:0.5rem}
+.seller-stat{display:flex;gap:0.5rem;align-items:center;font-size:0.82rem;color:var(--text-secondary-dark);margin-bottom:0.3rem}
+.contact-btns{display:flex;flex-direction:column;gap:0.75rem;margin-top:1.25rem}
+.btn-whatsapp{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;font-weight:700}
+.btn-full{width:100%;justify-content:center;display:flex;padding:0.75rem}
+.financing-calc{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:16px;padding:1.5rem;margin-top:1.25rem}
+.calc-title{font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:1rem;color:var(--primary-yellow)}
+.calc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;font-size:0.88rem}
+.calc-input-small{width:80px;padding:0.4rem 0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.85rem;text-align:center;outline:none}
+.calc-result{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:900;color:var(--primary-yellow);text-align:center;padding:1rem;background:rgba(255,255,0,0.05);border-radius:10px;margin-top:0.75rem}
+/* Dashboard */
+.dash-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 64px)}
+.dash-sidebar{background:var(--dark-surface);border-right:1px solid var(--glass-border);padding:2rem 0;position:sticky;top:64px;height:calc(100vh - 64px);overflow-y:auto}
+.dash-nav-item{display:flex;align-items:center;gap:0.85rem;padding:0.85rem 1.5rem;cursor:pointer;transition:all 0.2s;font-weight:500;font-size:0.9rem;color:var(--text-secondary-dark);border-left:3px solid transparent}
+.dash-nav-item:hover{background:var(--glass);color:var(--text-primary)}
+.dash-nav-item.active{background:rgba(255,255,0,0.08);color:var(--primary-yellow);border-left-color:var(--primary-yellow)}
+.dash-icon{font-size:1.1rem;width:20px;text-align:center}
+.dash-content{padding:2rem;background:var(--dark-bg)}
+.dash-header{margin-bottom:2rem}
+.dash-title{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:700;margin-bottom:0.25rem}
+.dash-subtitle{color:var(--text-muted);font-size:0.88rem}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.metric-card{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:14px;padding:1.25rem 1.5rem;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:0.15}
+.metric-card.blue::before{background:var(--primary-yellow)}
+.metric-card.red::before{background:var(--accent-black)}
+.metric-card.gold::before{background:var(--primary-yellow)}
+.metric-card.green::before{background:#ffff00}
+.metric-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted-dark);margin-bottom:0.5rem;font-weight:600}
+.metric-value{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:900}
+.metric-card.blue .metric-value{color:var(--primary-yellow)}
+.metric-card.red .metric-value{color:var(--accent-black)}
+.metric-card.gold .metric-value{color:var(--primary-yellow)}
+.metric-card.green .metric-value{color:#ffff00}
+.metric-change{font-size:0.78rem;color:var(--text-muted-dark);margin-top:0.3rem}
+.metric-change.up{color:var(--primary-yellow)}
+.metric-change.down{color:var(--accent-black)}
+.data-table{width:100%;border-collapse:collapse;font-size:0.88rem}
+.data-table th{padding:0.85rem 1rem;text-align:left;font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted-dark);border-bottom:1px solid var(--glass-border);font-weight:600}
+.data-table td{padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+.data-table tr:hover td{background:var(--glass)}
+.table-card{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:14px;overflow:hidden;margin-bottom:1.5rem}
+.table-card-header{padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border)}
+.table-card-title{font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700}
+.status-badge{padding:0.2rem 0.6rem;border-radius:100px;font-size:0.7rem;font-weight:700;letter-spacing:0.5px}
+.status-active{background:rgba(255,255,0,0.15);color:var(--primary-yellow)}
+.status-pending{background:rgba(255,215,0,0.15);color:var(--primary-yellow)}
+.status-sold{background:rgba(255,255,0,0.15);color:var(--primary-yellow)}
+.status-rejected{background:rgba(0,0,0,0.15);color:var(--accent-black)}
+/* Post form */
+.post-form{max-width:800px}
+.form-section{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem}
+.form-section-title{font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:1.25rem;color:var(--primary-yellow);display:flex;align-items:center;gap:0.5rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:0.5rem}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:0.78rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted-dark);font-weight:600}
+.form-control{padding:0.7rem 0.9rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.95rem;outline:none;transition:border-color 0.2s}
+.form-control:focus{border-color:var(--primary-yellow)}
+.form-control option{background:var(--dark-card)}
+.upload-zone{border:2px dashed var(--glass-border);border-radius:12px;padding:2.5rem;text-align:center;cursor:pointer;transition:all 0.2s}
+.upload-zone:hover{border-color:var(--primary-yellow);background:rgba(255,255,0,0.03)}
+.upload-icon{font-size:2.5rem;margin-bottom:0.75rem;opacity:0.4}
+/* Packages */
+.packages-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.25rem 0}
+.package{background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative}
+.package:hover,.package.selected{border-color:var(--primary-yellow);background:rgba(255,255,0,0.06)}
+.package.featured-pkg{border-color:var(--primary-yellow)}
+.package.featured-pkg:hover,.package.featured-pkg.selected{background:rgba(255,255,0,0.06)}
+.pkg-name{font-family:'Orbitron',monospace;font-size:0.85rem;font-weight:700;margin-bottom:0.5rem}
+.pkg-price{font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;color:var(--primary-yellow);margin-bottom:0.75rem}
+.pkg-feature{font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.3rem}
+.pkg-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:#000;font-size:0.65rem;font-weight:700;padding:0.2rem 0.75rem;border-radius:100px;white-space:nowrap;text-transform:uppercase;letter-spacing:1px}
+/* Auth modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:2000;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--dark-card);border:1px solid var(--glass-border);border-radius:20px;padding:2.5rem;max-width:400px;width:100%;position:relative}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--text-muted-dark);font-size:1.25rem;cursor:pointer;transition:color 0.2s}
+.modal-close:hover{color:var(--text-primary)}
+.modal-logo{font-family:'Orbitron',monospace;font-size:1.25rem;font-weight:900;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem}
+.modal-title{font-size:1.4rem;font-weight:700;margin-bottom:0.25rem}
+.modal-subtitle{color:var(--text-muted-dark);font-size:0.88rem;margin-bottom:1.75rem}
+.modal-form{display:flex;flex-direction:column;gap:1rem}
+.modal-input{padding:0.8rem 1rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:0.95rem;outline:none;transition:border-color 0.2s}
+.modal-input:focus{border-color:var(--primary-yellow)}
+.modal-divider{display:flex;align-items:center;gap:1rem;margin:0.5rem 0;color:var(--text-muted-dark);font-size:0.82rem}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--glass-border)}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:0.8rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:all 0.2s;font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:var(--text-primary);font-weight:600}
+.google-btn:hover{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.05)}
+.modal-footer{text-align:center;margin-top:1rem;font-size:0.85rem;color:var(--text-muted-dark)}
+.modal-footer a{color:var(--primary-yellow);cursor:pointer}
+/* Toast */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--dark-card);border:1px solid var(--primary-yellow);border-radius:12px;padding:1rem 1.5rem;z-index:3000;display:none;align-items:center;gap:0.75rem;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideIn 0.3s ease}
+.toast.show{display:flex}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast-icon{font-size:1.25rem}
+.toast-text{font-size:0.9rem;color:var(--text-primary)}
+/* Footer */
+footer{background:var(--dark-surface);border-top:1px solid var(--glass-border);padding:3rem 2rem 1.5rem;margin-top:auto}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:2rem;max-width:1200px;margin:0 auto;margin-bottom:2rem}
+.footer-brand .logo{font-size:1.1rem;margin-bottom:0.75rem;display:block}
+.footer-desc{color:var(--text-muted-dark);font-size:0.85rem;line-height:1.7}
+.footer-col h4{font-family:'Orbitron',monospace;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary-dark);margin-bottom:1rem}
+.footer-links{display:flex;flex-direction:column;gap:0.5rem}
+.footer-link{color:var(--text-muted-dark);font-size:0.85rem;cursor:pointer;transition:color 0.2s}
+.footer-link:hover{color:var(--primary-yellow)}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:1.5rem;border-top:1px solid var(--glass-border);max-width:1200px;margin:0 auto;flex-wrap:wrap;gap:0.5rem}
+.footer-copy{color:var(--text-muted-dark);font-size:0.8rem}
+.footer-socials{display:flex;gap:0.75rem}
+.social-btn{width:32px;height:32px;border:1px solid var(--glass-border);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted-dark);font-size:0.85rem;transition:all 0.2s}
+.social-btn:hover{border-color:var(--primary-yellow);color:var(--primary-yellow)}
+/* Chat bubble */
+.chat-bubble{position:fixed;bottom:2rem;right:2rem;left:auto;width:52px;height:52px;background:linear-gradient(135deg,var(--primary-yellow),#cccc00);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.35rem;z-index:900;box-shadow:0 4px 20px rgba(255,255,0,0.3);transition:transform 0.2s}
+
+.chat-bubble:hover{transform:scale(1.1)}
+
+/* Chat UI */
+.chat-window{position:fixed;bottom:1.3rem;left:1.3rem;width:min(360px,calc(100vw - 2.6rem));height:520px;background:rgba(10,16,30,0.92);border:1px solid rgba(255,255,0,0.25);border-radius:18px;z-index:950;display:none;flex-direction:column;overflow:hidden;backdrop-filter:blur(12px);box-shadow:0 18px 60px rgba(0,0,0,0.6)}
+.chat-window.open{display:flex}
+.chat-header{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1rem;background:linear-gradient(135deg,rgba(255,255,0,0.12),rgba(0,212,255,0.08));border-bottom:1px solid rgba(255,255,255,0.08)}
+.chat-title{display:flex;flex-direction:column;gap:0.1rem}
+.chat-title strong{font-family:'Orbitron',monospace;font-size:0.95rem;color:var(--primary-yellow);letter-spacing:1px}
+.chat-title span{font-size:0.78rem;color:var(--text-muted-dark)}
+.chat-close{border:none;background:transparent;color:var(--text-muted-dark);cursor:pointer;font-size:1.2rem;line-height:1;padding:0.2rem 0.4rem;border-radius:8px}
+.chat-close:hover{color:var(--text-primary);background:rgba(255,255,255,0.06)}
+.chat-messages{flex:1;overflow:auto;padding:1rem;display:flex;flex-direction:column;gap:0.6rem}
+.chat-bubble-msg{max-width:85%;padding:0.7rem 0.85rem;border-radius:14px;border:1px solid rgba(255,255,255,0.08)}
+.chat-bubble-msg.bot{background:rgba(255,255,255,0.05);color:var(--text-primary);align-self:flex-start}
+.chat-bubble-msg.user{background:rgba(255,255,0,0.08);border-color:rgba(255,255,0,0.18);align-self:flex-end}
+.chat-meta{font-size:0.7rem;color:var(--text-muted-dark);margin-top:0.35rem}
+.chat-quick{display:flex;gap:0.5rem;flex-wrap:wrap;padding:0.75rem 1rem;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.15)}
+.chat-quick button{border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text-secondary-dark);border-radius:999px;padding:0.35rem 0.65rem;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:0.8rem}
+.chat-quick button:hover{border-color:var(--primary-yellow);color:var(--primary-yellow)}
+.chat-inputbar{display:flex;gap:0.5rem;padding:0.85rem 1rem;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.2)}
+.chat-inputbar input{flex:1;border-radius:12px;padding:0.65rem 0.75rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:var(--text-primary);outline:none;font-family:'Rajdhani',sans-serif}
+.chat-inputbar input:focus{border-color:var(--primary-yellow)}
+.chat-send{border:none;border-radius:12px;padding:0.65rem 0.85rem;background:linear-gradient(135deg,var(--primary-yellow),#cccc00);color:var(--accent-black);font-weight:900;cursor:pointer;font-family:'Orbitron',monospace;letter-spacing:1px}
+.chat-send:hover{opacity:0.9}
+
+/* Glowing line */
+.glow-line{height:1px;background:linear-gradient(90deg,transparent,var(--primary-yellow),var(--accent-black),transparent);margin:0}
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--glass-border);margin-bottom:1.5rem}
+.tab{padding:0.85rem 1.5rem;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px}
+.tab.active{color:var(--primary-yellow);border-bottom-color:var(--primary-yellow)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Section label */
+.section-label{display:inline-flex;align-items:center;gap:0.5rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:3px;color:var(--primary-yellow);margin-bottom:0.75rem;font-weight:700}
+.section-label::before{content:'';width:20px;height:2px;background:var(--primary-yellow)}
+/* Admin chart mock */
+.chart-bar-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem}
+.chart-label{font-size:0.78rem;color:var(--text-secondary-dark);width:80px;text-align:right}
+.chart-bar-track{flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary-yellow),var(--accent-black));transition:width 1s ease}
+.chart-val{font-size:0.78rem;color:var(--text-muted-dark);width:40px}
+/* Progress ring */
+.progress-ring{display:flex;align-items:center;gap:1rem}
+.ring{width:60px;height:60px;flex-shrink:0}
+/* Smooth transitions */
+.page{animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* Mobile responsive */
+@media(max-width:768px){
+.nav-links{display:none}
+.listings-layout{grid-template-columns:1fr}
+.filters-panel{position:static}
+.detail-layout{grid-template-columns:1fr}
+.seller-card{position:static}
+.dash-layout{grid-template-columns:1fr}
+.dash-sidebar{height:auto;position:static;display:flex;flex-wrap:wrap;padding:0.5rem;border-right:none;border-bottom:1px solid var(--glass-border)}
+.dash-nav-item{border-left:none;border-bottom:3px solid transparent;flex-direction:column;gap:0.25rem;padding:0.5rem 0.75rem;font-size:0.72rem}
+.dash-nav-item.active{border-bottom-color:var(--primary-yellow);border-left:none}
+.packages-grid{grid-template-columns:1fr}
+.footer-grid{grid-template-columns:1fr 1fr}
+}
+/* (moved/handled in the main head) */
+/* @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap'); */
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--dark-bg);font-family:'Rajdhani',sans-serif}
+
+.brands-section{padding:4rem 2rem;background:var(--dark-bg);overflow:hidden;color:var(--text-primary)}
+.brand-section-sub,.brands-section .section-sub{color:var(--text-muted-dark)}
+
+.brands-section .section-title{color:var(--text-primary)}
+.section-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:0.6rem}
+.eyebrow-line{width:28px;height:2px;background:var(--primary-yellow)}
+.eyebrow-text{font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--primary-yellow);font-weight:700}
+.section-title{font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;color:var(--text-primary);margin-bottom:0.4rem}
+.section-sub{font-size:0.88rem;color:var(--text-muted-dark);margin-bottom:2.5rem}
+
+
+
+.tabs-row{display:flex;gap:0;margin-bottom:2rem;border-bottom:1px solid rgba(255,255,255,0.07)}
+.tab-btn{padding:0.6rem 1.4rem;font-family:'Rajdhani',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8899aa;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;margin-bottom:-1px}
+.tab-btn.active{color:var(--primary-yellow);border-bottom-color:var(--primary-yellow)}
+.tab-btn:hover:not(.active){color:#f0f4ff}
+
+.brands-track{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem}
+.brand-card{position:relative;background:#0d1526;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1.5rem 1rem 1.25rem;text-align:center;cursor:pointer;transition:all 0.25s;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:0.6rem}
+.brand-card::before{content:'';position:absolute;inset:0;border-radius:14px;opacity:0;transition:opacity 0.25s;pointer-events:none}
+.brand-card:hover{border-color:rgba(255,255,0,0.35);transform:translateY(-4px)}
+.brand-card:hover::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(255,255,0,0.07) 0%,transparent 70%)}
+.brand-card.hot{border-color:rgba(255,45,85,0.25)}
+.brand-card.hot:hover{border-color:rgba(255,45,85,0.5)}
+.brand-card.hot::before{background:radial-gradient(ellipse at 50% 0%,rgba(255,45,85,0.07) 0%,transparent 70%)}
+
+.brand-logo-wrap{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:#111827;border:1px solid rgba(255,255,255,0.06);transition:all 0.25s;flex-shrink:0}
+.brand-card:hover .brand-logo-wrap{border-color:rgba(255,255,0,0.3);background:#0a1a2e}
+.brand-card.hot:hover .brand-logo-wrap{border-color:rgba(255,45,85,0.3)}
+
+.brand-name{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:#aabbcc;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.2s;line-height:1.3}
+.brand-card:hover .brand-name{color:var(--primary-yellow)}
+.brand-card.hot:hover .brand-name{color:#ff2d55}
+
+.brand-count{font-size:0.68rem;color:#445566;font-weight:600}
+.brand-card:hover .brand-count{color:#8899aa}
+
+.brand-hot-badge{position:absolute;top:8px;right:8px;background:#ff2d55;color:#fff;font-size:0.55rem;font-weight:700;padding:2px 6px;border-radius:100px;letter-spacing:1px;text-transform:uppercase}
+.brand-new-badge{position:absolute;top:8px;right:8px;background:var(--primary-yellow);color:#000;font-size:0.55rem;font-weight:700;padding:2px 6px;border-radius:100px;letter-spacing:1px;text-transform:uppercase}
+
+.marquee-wrapper{overflow:hidden;margin-top:2rem;padding:1rem 0;border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)}
+.marquee-track{display:flex;gap:2.5rem;width:max-content;animation:scroll 22s linear infinite}
+.marquee-track:hover{animation-play-state:paused}
+.marquee-item{display:flex;align-items:center;gap:0.6rem;padding:0.3rem 1.2rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:100px;white-space:nowrap}
+.marquee-dot{width:6px;height:6px;border-radius:50%;background:var(--primary-yellow);flex-shrink:0}
+.marquee-dot.red{background:#ff2d55}
+.marquee-label{font-size:0.78rem;font-weight:600;color:#8899aa;letter-spacing:1px;text-transform:uppercase}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+
+<nav>
+  <span class="logo" onclick="goTo('home')">⚡ CEYLON<span style="color:var(--primary-yellow)">SUPER</span></span>
+  <div class="nav-links">
+    <span class="nav-link" onclick="goTo('home')">Home</span>
+    <span class="nav-link" onclick="goTo('listings')">Browse</span>
+    <span class="nav-link" onclick="goTo('seller')">Sell</span>
+    <span class="nav-link" onclick="goTo('admin')">Admin</span>
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-ghost" onclick="openModal('login')">Login</button>
+    <button class="btn btn-primary" onclick="openModal('signup')">Sign Up</button>
+    <button class="btn btn-danger" onclick="goTo('post')" style="margin-left:0.25rem">+ Post Ad</button>
+  </div>
+</nav>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge">🇱🇰 Sri Lanka's #1 Exotic Vehicle Marketplace</div>
+      <h1 class="hero-title">Find Your<br><span>Dream Machine</span></h1>
+      <p class="hero-sub">The most advanced platform for buying and selling superbikes and supercars in Sri Lanka. Verified listings, premium sellers, instant contact.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-primary" style="font-size:1rem;padding:0.85rem 2rem" onclick="goTo('listings')">Browse Vehicles</button>
+        <button class="btn btn-danger" style="font-size:1rem;padding:0.85rem 2rem" onclick="goTo('post')">Sell Your Vehicle</button>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" placeholder="Search superbikes, supercars, brands..." id="heroSearch">
+        <select class="search-select"><option>All Types</option><option>Superbikes</option><option>Supercars</option></select>
+        <select class="search-select"><option>Any Location</option><option>Ampara</option><option>Anuradhapura</option><option>Badulla</option><option>Batticaloa</option><option>Colombo</option><option>Galle</option><option>Gampaha</option><option>Hambantota</option><option>Jaffna</option><option>Kalutara</option><option>Kandy</option><option>Kegalle</option><option>Kilinochchi</option><option>Kurunegala</option><option>Mannar</option><option>Matale</option><option>Matara</option><option>Moneragala</option><option>Mullaitivu</option><option>Nuwara Eliya</option><option>Polonnaruwa</option><option>Puttalam</option><option>Ratnapura</option><option>Trincomalee</option><option>Vavuniya</option></select>
+        <button class="btn btn-primary" onclick="goTo('listings')">Search</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-num" id="c1">0</div><div class="hero-stat-label">Active Listings</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="c2">0</div><div class="hero-stat-label">Verified Sellers</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="c3">0</div><div class="hero-stat-label">Vehicles Sold</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="c4">0</div><div class="hero-stat-label">Happy Buyers</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="glow-line"></div>
+
+  <!-- Featured Superbikes -->
+  <div class="section">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <div class="section-label"> Hot Right Now</div>
+          <div class="section-title">Featured <span>Superbikes</span></div>
+        </div>
+        <span class="section-link" onclick="goTo('listings')">View All →</span>
+      </div>
+      <div class="cards-grid" id="bikesGrid"></div>
+    </div>
+  </div>
+
+  <!-- Featured Supercars -->
+  <div class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <div class="section-label"> Supercar Spotlight</div>
+          <div class="section-title">Premium <span>Supercars</span></div>
+        </div>
+        <span class="section-link" onclick="goTo('listings')">View All →</span>
+      </div>
+      <div class="cards-grid" id="carsGrid"></div>
+    </div>
+  </div>
+
+  <!-- Brands -->
+  <div class="brands-section">
+    <div class="section-eyebrow"><div class="eyebrow-line"></div><div class="eyebrow-text">Explore by Brand</div></div>
+    <div class="section-title">Top <span style="background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Brands</span></div>
+    <div class="section-sub">Filter by your favourite marque — from Japanese precision to Italian fury</div>
+
+    <div class="tabs-row">
+        <button class="tab-btn active" onclick="filterBrands('all',this)">All</button>
+        <button class="tab-btn" onclick="filterBrands('bike',this)">Superbikes</button>
+        <button class="tab-btn" onclick="filterBrands('car',this)">Supercars</button>
+    </div>
+
+    <div class="brands-track" id="brandsGrid"></div>
+
+    <div class="marquee-wrapper">
+        <div class="marquee-track" id="marquee"></div>
+    </div>
+    </div>
+
+  <!-- Stats -->
+  <div class="stats-section">
+    <div class="container">
+      <div class="section-title" style="margin-bottom:2.5rem">Why Choose <span style="background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));-webkit-background-clip:text;-webkit-text-fill-color:transparent">CeylonSuper</span>?</div>
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Verified Sellers</div></div>
+        <div class="stat-item"><div class="stat-num">24hrs</div><div class="stat-label">Average Sale Time</div></div>
+        <div class="stat-item"><div class="stat-num">5000+</div><div class="stat-label">Successful Deals</div></div>
+        <div class="stat-item"><div class="stat-num">Zero</div><div class="stat-label">Hidden Fees</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Testimonials -->
+  <div class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-title">What Buyers <span>Say</span></div>
+      </div>
+      <div class="testimonials">
+        <div class="testimonial"><div class="stars">★★★★★</div><div class="testimonial-text">Found my dream Ducati Panigale V4 in just 3 days! The platform is incredibly smooth and the seller was verified. Best automotive marketplace in Sri Lanka by far.</div><div class="testimonial-author"><div class="testimonial-avatar">RK</div><div><div class="testimonial-name">Ravindu Karunarathne</div><div class="testimonial-vehicle">Bought: Ducati Panigale V4</div></div></div></div>
+        <div class="testimonial"><div class="stars">★★★★★</div><div class="testimonial-text">Sold my Kawasaki H2 in 2 days! The Featured listing was worth every rupee. Got 50+ inquiries and closed a great deal. The interface is absolutely stunning.</div><div class="testimonial-author"><div class="testimonial-avatar">AP</div><div><div class="testimonial-name">Amara Perera</div><div class="testimonial-vehicle">Sold: Kawasaki Ninja H2</div></div></div></div>
+        <div class="testimonial"><div class="stars">★★★★★</div><div class="testimonial-text">The financing calculator helped me plan my Lamborghini purchase perfectly. CeylonSuper feels like a luxury experience — not just a classifieds site.</div><div class="testimonial-author"><div class="testimonial-avatar">DS</div><div><div class="testimonial-name">Dilshan Silva</div><div class="testimonial-vehicle">Bought: Lamborghini Huracán</div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Newsletter -->
+  <div class="section" style="padding-top:0">
+    <div class="container">
+      <div class="newsletter">
+        <h2>Stay in the <span style="color:var(--primary-yellow)">Fast Lane</span></h2>
+        <p>Get alerts for new listings, price drops, and exclusive deals in your inbox.</p>
+        <div class="newsletter-form">
+          <input class="newsletter-input" placeholder="your@email.com">
+          <button class="btn btn-primary">Subscribe</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="logo">⚡ CEYLONSUPER</span>
+        <p class="footer-desc">Sri Lanka's premier marketplace for superbikes and supercars. Buy, sell, and discover the finest exotic vehicles with confidence.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Browse</h4>
+        <div class="footer-links">
+          <span class="footer-link">Superbikes</span>
+          <span class="footer-link">Supercars</span>
+          <span class="footer-link">Featured Ads</span>
+          <span class="footer-link">New Arrivals</span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Sell</h4>
+        <div class="footer-links">
+          <span class="footer-link">Post an Ad</span>
+          <span class="footer-link">Pricing Plans</span>
+          <span class="footer-link">Seller Tips</span>
+          <span class="footer-link">Dashboard</span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <div class="footer-links">
+          <span class="footer-link">About Us</span>
+          <span class="footer-link">Contact</span>
+          <span class="footer-link">Privacy Policy</span>
+          <span class="footer-link">Terms</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 CeylonSuper · All rights reserved · Made in 🇱🇰</div>
+      <div class="footer-socials">
+        <div class="social-btn">f</div>
+        <div class="social-btn">in</div>
+        <div class="social-btn">yt</div>
+        <div class="social-btn">ig</div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- LISTINGS PAGE -->
+<div id="page-listings" class="page">
+  <div class="listings-layout">
+    <div class="filters-panel">
+      <div style="font-family:'Orbitron',monospace;font-size:0.9rem;font-weight:700;margin-bottom:1.5rem;color:var(--primary-yellow)">⚙ Filters</div>
+      <div class="filter-group">
+        <div class="filter-label">Vehicle Type</div>
+        <div class="filter-chips">
+          <span class="filter-chip active" onclick="toggleChip(this)">All</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Superbikes</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Supercars</span>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Brand</div>
+        <select class="filter-input"><option>All Brands</option><option>Ducati</option><option>Kawasaki</option><option>Yamaha</option><option>Honda</option><option>Ferrari</option><option>Lamborghini</option><option>Porsche</option></select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Price Range (LKR)</div>
+        <div class="filter-range">
+          <input type="number" placeholder="Min" class="filter-range" style="width:100%;padding:0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;outline:none">
+          <input type="number" placeholder="Max" class="filter-range" style="width:100%;padding:0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;outline:none">
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Year</div>
+        <div class="filter-range">
+          <input type="number" placeholder="From" style="width:100%;padding:0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;outline:none">
+          <input type="number" placeholder="To" style="width:100%;padding:0.5rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--text-primary);font-family:'Rajdhani',sans-serif;outline:none">
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Location</div>
+        <div class="filter-chips-scroll">
+          <span class="filter-chip active" onclick="toggleChip(this)">All</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Ampara</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Anuradhapura</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Badulla</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Batticaloa</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Colombo</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Galle</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Gampaha</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Hambantota</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Jaffna</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Kalutara</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Kandy</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Kegalle</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Kilinochchi</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Kurunegala</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Mannar</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Matale</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Matara</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Moneragala</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Mullaitivu</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Nuwara Eliya</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Polonnaruwa</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Puttalam</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Ratnapura</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Trincomalee</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Vavuniya</span>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Condition</div>
+        <div class="filter-chips">
+          <span class="filter-chip active" onclick="toggleChip(this)">Any</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Brand New</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Reconditioned</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Used</span>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Show Only</div>
+        <div class="filter-chips">
+          <span class="filter-chip" onclick="toggleChip(this)">Featured</span>
+          <span class="filter-chip" onclick="toggleChip(this)">Premium</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:0.5rem">Apply Filters</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:0.5rem">Reset</button>
+    </div>
+    <div>
+      <div class="listings-header">
+        <span class="results-count">Showing <strong>247</strong> vehicles</span>
+        <div style="display:flex;gap:0.75rem;align-items:center">
+          <select class="sort-select"><option>Latest First</option><option>Price: Low to High</option><option>Price: High to Low</option><option>Mileage: Low</option><option>Year: Newest</option></select>
+        </div>
+      </div>
+      <div class="cards-grid" id="listingsGrid"></div>
+      <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:2rem;flex-wrap:wrap">
+        ${[1,2,3,'...',12].map(p=>`<button class="btn ${p===1?'btn-primary':'btn-ghost'}" style="min-width:40px;padding:0.5rem 0.75rem">${p}</button>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PAGE -->
+<div id="page-detail" class="page">
+  <div class="detail-layout">
+    <div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:var(--text-muted);font-size:0.82rem;cursor:pointer" onclick="goTo('listings')">← Back to Listings</div>
+      <div class="gallery-main" id="galleryMain">🏍️</div>
+      <div class="gallery-thumbs" id="galleryThumbs"></div>
+      <div style="margin-top:1.5rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+          <div>
+            <div class="section-label" id="detailBadge">🏍️ Superbike · Featured</div>
+            <h1 style="font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;margin-bottom:0.5rem" id="detailTitle">Kawasaki Ninja H2</h1>
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+              <span style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:var(--primary-yellow)" id="detailPrice">LKR 18,500,000</span>
+              <span class="badge badge-featured">Featured</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem">
+            <button class="btn btn-ghost" onclick="showToast('❤️','Added to favorites')">♥ Save</button>
+            <button class="btn btn-ghost" onclick="showToast('🔗','Link copied!')">↗ Share</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:1.5rem;margin-top:1rem;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:0.4rem;font-size:0.9rem;color:var(--text-secondary)">📍 Colombo 03</span>
+          <span style="display:flex;align-items:center;gap:0.4rem;font-size:0.9rem;color:var(--text-secondary)">📅 Posted 2 days ago</span>
+          <span style="display:flex;align-items:center;gap:0.4rem;font-size:0.9rem;color:var(--text-secondary)">👁 342 views</span>
+        </div>
+      </div>
+      <div class="tabs" style="margin-top:2rem">
+        <div class="tab active" onclick="switchTab(this,'tab-specs')">Specifications</div>
+        <div class="tab" onclick="switchTab(this,'tab-desc')">Description</div>
+        <div class="tab" onclick="switchTab(this,'tab-similar')">Similar Listings</div>
+      </div>
+      <div id="tab-specs" class="tab-content active">
+        <div class="specs-grid" id="specsGrid"></div>
+      </div>
+      <div id="tab-desc" class="tab-content">
+        <div style="color:var(--text-secondary);line-height:1.8;font-size:0.95rem;padding:0.5rem 0">
+          The Kawasaki Ninja H2 is the most powerful production motorcycle ever built by Kawasaki. This machine features a supercharged 998cc inline-four engine producing 231hp, capable of 0-100km/h in under 3 seconds. Imported from Japan, single owner, full service history available. Includes original Kawasaki accessories and custom exhaust. This is a collector-grade machine in immaculate condition — a true investment piece.
+          <br><br><strong style="color:var(--text-primary)">Includes:</strong> Kawasaki custom cover, spare key, full service records, import documents, registration.
+        </div>
+      </div>
+      <div id="tab-similar" class="tab-content">
+        <div class="cards-grid" id="similarGrid"></div>
+      </div>
+    </div>
+    <div>
+      <div class="seller-card">
+        <div class="seller-avatar">AP</div>
+        <div class="seller-name">Amara Perera</div>
+        <div class="seller-rating">★★★★★ 4.9 · 12 reviews</div>
+        <div class="seller-stat">✅ Identity Verified</div>
+        <div class="seller-stat">📋 Member since 2021</div>
+        <div class="seller-stat">🏍️ 8 active listings</div>
+        <div class="contact-btns">
+          <button class="btn btn-primary btn-full" onclick="showToast('📨','Message sent to seller!')">📩 Send Message</button>
+          <button class="btn btn-whatsapp btn-full" onclick="showToast('💬','Opening WhatsApp...')">💬 WhatsApp</button>
+          <button class="btn btn-ghost btn-full" onclick="showToast('📞','Revealing contact...')">📞 Show Number</button>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--glass-border)">
+          <button class="btn btn-ghost" style="width:100%;font-size:0.78rem;color:var(--primary-yellow)" onclick="showToast('🚩','Listing reported')">⚑ Report Listing</button>
+        </div>
+      </div>
+      <div class="financing-calc">
+        <div class="calc-title">💳 Financing Calculator</div>
+        <div class="calc-row"><span style="color:var(--text-secondary)">Vehicle Price</span><span style="font-weight:700">LKR 18,500,000</span></div>
+        <div class="calc-row"><span style="color:var(--text-secondary)">Down Payment (%)</span><input class="calc-input-small" type="number" value="20" min="10" max="80" id="downPct" oninput="calcEMI()"></div>
+        <div class="calc-row"><span style="color:var(--text-secondary)">Loan Term (months)</span><input class="calc-input-small" type="number" value="60" min="12" max="84" id="loanTerm" oninput="calcEMI()"></div>
+        <div class="calc-row"><span style="color:var(--text-secondary)">Interest Rate (%)</span><input class="calc-input-small" type="number" value="12" min="6" max="24" id="interestRate" oninput="calcEMI()"></div>
+        <div class="calc-result">Monthly: <span id="emiResult">LKR 327,000</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SELLER DASHBOARD -->
+<div id="page-seller" class="page">
+  <div class="dash-layout">
+    <div class="dash-sidebar">
+      <div style="padding:1.5rem 1.5rem 1rem;border-bottom:1px solid var(--glass-border)">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));display:flex;align-items:center;justify-content:center;font-weight:900;font-family:'Orbitron',monospace;color:#000">AP</div>
+          <div><div style="font-weight:700;font-size:0.9rem">Amara Perera</div><div style="font-size:0.75rem;color:var(--text-muted-dark)">Verified Seller</div></div>
+        </div>
+      </div>
+      <div class="dash-nav-item active" onclick="sellerTab('overview',this)"><span class="dash-icon">📊</span> Overview</div>
+      <div class="dash-nav-item" onclick="sellerTab('listings',this)"><span class="dash-icon">🚗</span> My Listings</div>
+      <div class="dash-nav-item" onclick="sellerTab('inquiries',this)"><span class="dash-icon">💬</span> Inquiries</div>
+      <div class="dash-nav-item" onclick="sellerTab('payments',this)"><span class="dash-icon">💳</span> Payments</div>
+      <div class="dash-nav-item" onclick="sellerTab('profile',this)"><span class="dash-icon">👤</span> Profile</div>
+      <div class="dash-nav-item" style="margin-top:auto;color:var(--primary-yellow)" onclick="goTo('home')"><span class="dash-icon">←</span> Exit Dashboard</div>
+    </div>
+    <div class="dash-content">
+      <div id="seller-overview">
+        <div class="dash-header">
+          <div class="dash-title">Seller Overview</div>
+          <div class="dash-subtitle">Welcome back, Amara · <span style="color:var(--primary-yellow)">8 Active Ads</span></div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card blue"><div class="metric-label">Active Listings</div><div class="metric-value">8</div><div class="metric-change up">↑ +2 this week</div></div>
+          <div class="metric-card gold"><div class="metric-label">Total Views</div><div class="metric-value">4,821</div><div class="metric-change up">↑ +15% this week</div></div>
+          <div class="metric-card green"><div class="metric-label">Inquiries</div><div class="metric-value">127</div><div class="metric-change up">↑ +23 today</div></div>
+          <div class="metric-card red"><div class="metric-label">Vehicles Sold</div><div class="metric-value">14</div><div class="metric-change">All time</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-header"><div class="table-card-title">Recent Activity</div></div>
+          <table class="data-table">
+            <thead><tr><th>Vehicle</th><th>Views</th><th>Inquiries</th><th>Package</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+              ${[['Kawasaki H2','342','28','Premium','active'],['Ducati V4','189','15','Featured','active'],['Yamaha R1','97','8','Basic','active'],['Honda CBR','45','3','Basic','pending']].map(([v,vi,i,p,s])=>`<tr><td style="font-weight:600">${v}</td><td style="color:var(--text-secondary-dark)">${vi}</td><td style="color:var(--primary-yellow)">${i}</td><td><span class="badge ${p==='Premium'?'badge-premium':p==='Featured'?'badge-featured':'badge-new'}">${p}</span></td><td><span class="status-badge status-${s}">${s}</span></td><td><button class="btn btn-ghost" style="padding:0.3rem 0.75rem;font-size:0.78rem" onclick="showToast('✏️','Editing ${v}')">Edit</button></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="seller-listings" style="display:none">
+        <div class="dash-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div class="dash-title">My Listings</div><div class="dash-subtitle">Manage your vehicle advertisements</div></div>
+          <button class="btn btn-primary" onclick="goTo('post')">+ Post New Ad</button>
+        </div>
+        <div class="table-card">
+          <table class="data-table">
+            <thead><tr><th>Vehicle</th><th>Price</th><th>Package</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${[['Kawasaki Ninja H2','LKR 18.5M','Premium Spotlight','15 Jun 2025','active'],['Ducati Panigale V4','LKR 22.5M','Featured','22 Jun 2025','active'],['Yamaha R1 2023','LKR 8.9M','Basic','05 Jun 2025','active'],['Honda CBR1000RR','LKR 6.2M','Basic','01 Jun 2025','pending'],['Nissan GT-R R35','LKR 45M','Featured','08 Jun 2025','sold']].map(([v,p,pkg,e,s])=>`<tr><td style="font-weight:600">${v}</td><td style="color:var(--primary-yellow)">${p}</td><td><span class="badge ${pkg.includes('Premium')?'badge-premium':pkg==='Featured'?'badge-featured':'badge-new'}">${pkg}</span></td><td style="color:var(--text-muted-dark);font-size:0.82rem">${e}</td><td><span class="status-badge status-${s}">${s}</span></td><td style="display:flex;gap:0.5rem"><button class="btn btn-ghost" style="padding:0.3rem 0.6rem;font-size:0.75rem" onclick="showToast('✏️','Editing...')">Edit</button><button class="btn btn-ghost" style="padding:0.3rem 0.6rem;font-size:0.75rem;border-color:rgba(255,45,85,0.3);color:var(--primary-yellow)" onclick="showToast('🗑️','Deleted!')">Del</button></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="seller-inquiries" style="display:none">
+        <div class="dash-header"><div class="dash-title">Inquiries</div><div class="dash-subtitle">Messages from potential buyers</div></div>
+        ${[['Kavindu R.','Kawasaki H2','Hi, is the price negotiable? I\'m very interested and can come to inspect this weekend.','2h ago',true],['Dilshan S.','Ducati V4','What\'s the service history like? Any modifications done?','5h ago',false],['Priya M.','Yamaha R1','Can you WhatsApp me the additional photos please?','1d ago',false]].map(([n,v,m,t,u])=>`<div style="background:var(--dark-card);border:1px solid ${u?'var(--primary-yellow)':'var(--glass-border)'};border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;${u?'box-shadow:0 0 15px rgba(255,255,0,0.08)':''}"><div style="display:flex;justify-content:space-between;margin-bottom:0.5rem"><div style="display:flex;align-items:center;gap:0.5rem"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary-yellow),var(--accent-black));display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:900;color:#000">${n[0]}</div><div><div style="font-weight:600;font-size:0.9rem">${n}</div><div style="font-size:0.75rem;color:var(--text-muted-dark)">re: ${v}</div></div>${u?'<span class="badge badge-new" style="font-size:0.6rem">NEW</span>':''}</div><span style="font-size:0.75rem;color:var(--text-muted-dark)">${t}</span></div><p style="color:var(--text-secondary-dark);font-size:0.88rem;line-height:1.6;margin-bottom:0.75rem">${m}</p><div style="display:flex;gap:0.5rem"><button class="btn btn-primary" style="padding:0.35rem 0.85rem;font-size:0.78rem" onclick="showToast('💬','Reply opened')">Reply</button><button class="btn btn-ghost" style="padding:0.35rem 0.85rem;font-size:0.78rem">WhatsApp</button></div></div>`).join('')}
+      </div>
+      <div id="seller-payments" style="display:none">
+        <div class="dash-header"><div class="dash-title">Payments</div><div class="dash-subtitle">Your advertising spend and invoices</div></div>
+        <div class="table-card">
+          <table class="data-table">
+            <thead><tr><th>Invoice</th><th>Package</th><th>Vehicle</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+              ${[['#CS-2024-0045','Premium Spotlight','Kawasaki H2','LKR 9,900','15 May 2025','active'],['#CS-2024-0032','Featured','Ducati V4','LKR 4,500','05 May 2025','active'],['#CS-2024-0018','Basic','Honda CBR','LKR 1,500','01 Apr 2025','sold']].map(([inv,pkg,v,amt,d,s])=>`<tr><td style="font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--primary-yellow)">${inv}</td><td><span class="badge ${pkg.includes('Premium')?'badge-premium':pkg==='Featured'?'badge-featured':'badge-new'}">${pkg}</span></td><td>${v}</td><td style="font-weight:700">${amt}</td><td style="color:var(--text-muted);font-size:0.82rem">${d}</td><td><span class="status-badge status-${s}">${s}</span></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:1.5rem">
+          <div style="font-family:'Orbitron',monospace;font-size:1rem;font-weight:700;margin-bottom:1rem">Top Up Package</div>
+          <div class="packages-grid">
+            <div class="package" onclick="this.classList.toggle('selected');showToast('📦','Basic selected!')">
+              <div class="pkg-name">Basic</div>
+              <div class="pkg-price" style="font-size:1.2rem">LKR 1,500</div>
+              <div class="pkg-feature">30-day listing</div>
+              <div class="pkg-feature">Standard placement</div>
+              <div class="pkg-feature">Email support</div>
+            </div>
+            <div class="package featured-pkg" onclick="this.classList.toggle('selected');showToast('⭐','Featured selected!')">
+              <div class="pkg-badge">Most Popular</div>
+              <div class="pkg-name" style="color:var(--primary-yellow)">Featured</div>
+              <div class="pkg-price" style="font-size:1.2rem;color:var(--primary-yellow)">LKR 4,500</div>
+              <div class="pkg-feature">45-day listing</div>
+              <div class="pkg-feature">Top of category</div>
+              <div class="pkg-feature">Homepage slot</div>
+            </div>
+            <div class="package" onclick="selectPkg(this,'premium')">
+              <div class="pkg-name" style="color:var(--primary-yellow)">Premium</div>
+              <div class="pkg-price" style="font-size:1.2rem;color:var(--primary-yellow)">LKR 9,900</div>
+              <div class="pkg-feature">✔ 60-day listing</div>
+              <div class="pkg-feature">✔ Hero banner</div>
+              <div class="pkg-feature">✔ Priority support</div>
+            </div>
+
+          </div>
+          <button class="btn btn-primary" style="margin-top:1rem" onclick="showToast('💳','Redirecting to PayHere...')">Pay via PayHere</button>
+          <button class="btn btn-ghost" style="margin-top:0.75rem;margin-left:0.5rem" onclick="showToast('💳','Redirecting to Stripe...')">Pay via Stripe</button>
+        </div>
+      </div>
+      <div id="seller-profile" style="display:none">
+        <div class="dash-header"><div class="dash-title">Profile Settings</div></div>
+        <div class="post-form">
+          <div class="form-section">
+            <div class="form-section-title">👤 Personal Info</div>
+            <div class="form-grid">
+              <div class="form-group"><label class="form-label">Full Name</label><input class="form-control" value="Amara Perera"></div>
+              <div class="form-group"><label class="form-label">Email</label><input class="form-control" value="amara@example.com"></div>
+              <div class="form-group"><label class="form-label">Phone</label><input class="form-control" value="+94 77 123 4567"></div>
+              <div class="form-group"><label class="form-label">Location</label><select class="form-control"><option>Ampara</option><option>Anuradhapura</option><option>Badulla</option><option>Batticaloa</option><option>Colombo</option><option>Galle</option><option>Gampaha</option><option>Hambantota</option><option>Jaffna</option><option>Kalutara</option><option>Kandy</option><option>Kegalle</option><option>Kilinochchi</option><option>Kurunegala</option><option>Mannar</option><option>Matale</option><option>Matara</option><option>Moneragala</option><option>Mullaitivu</option><option>Nuwara Eliya</option><option>Polonnaruwa</option><option>Puttalam</option><option>Ratnapura</option><option>Trincomalee</option><option>Vavuniya</option></select></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('✅','Profile updated!')">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="page-admin" class="page">
+  <div class="dash-layout">
+    <div class="dash-sidebar">
+      <div style="padding:1.5rem;border-bottom:1px solid var(--glass-border);font-family:'Orbitron',monospace;font-size:0.8rem;color:var(--primary-yellow)">⚡ ADMIN PANEL</div>
+      <div class="dash-nav-item active" onclick="adminTab('analytics',this)"><span class="dash-icon">📊</span> Analytics</div>
+      <div class="dash-nav-item" onclick="adminTab('approve',this)"><span class="dash-icon">✅</span> Approve Ads</div>
+      <div class="dash-nav-item" onclick="adminTab('users',this)"><span class="dash-icon">👥</span> Users</div>
+      <div class="dash-nav-item" onclick="adminTab('payments',this)"><span class="dash-icon">💰</span> Revenue</div>
+      <div class="dash-nav-item" onclick="adminTab('reports',this)"><span class="dash-icon">🚩</span> Reports</div>
+      <div class="dash-nav-item" style="color:var(--primary-yellow);margin-top:1rem" onclick="goTo('home')"><span class="dash-icon">←</span> Exit</div>
+    </div>
+    <div class="dash-content">
+      <div id="admin-analytics">
+        <div class="dash-header"><div class="dash-title" style="color:var(--primary-yellow)">Platform Analytics</div><div class="dash-subtitle">Real-time CeylonSuper performance metrics</div></div>
+        <div class="metrics-grid">
+          <div class="metric-card blue"><div class="metric-label">Total Listings</div><div class="metric-value">1,247</div><div class="metric-change up">↑ +34 today</div></div>
+          <div class="metric-card green"><div class="metric-label">Active Users</div><div class="metric-value">8,392</div><div class="metric-change up">↑ +12% this week</div></div>
+          <div class="metric-card gold"><div class="metric-label">Revenue (May)</div><div class="metric-value">2.4M</div><div class="metric-change up">↑ +18% vs Apr</div></div>
+          <div class="metric-card red"><div class="metric-label">Pending Review</div><div class="metric-value">23</div><div class="metric-change down">↓ 5 flagged</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-header"><div class="table-card-title">Revenue by Package</div></div>
+          <div style="padding:1.5rem">
+            ${[['Premium Spotlight',85],['Featured',62],['Basic',38],['Boosted',21]].map(([l,v])=>`<div class="chart-bar-row"><span class="chart-label">${l}</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${v}%"></div></div><span class="chart-val">${v}%</span></div>`).join('')}
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-header"><div class="table-card-title">Top Categories by Views</div></div>
+          <div style="padding:1.5rem">
+            ${[['Kawasaki',92],['Ducati',78],['Lamborghini',71],['Yamaha',65],['Ferrari',58]].map(([l,v])=>`<div class="chart-bar-row"><span class="chart-label">${l}</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${v}%;background:linear-gradient(90deg,var(--primary-yellow),var(--accent-black))"></div></div><span class="chart-val">${v}k</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="admin-approve" style="display:none">
+        <div class="dash-header"><div class="dash-title">Pending Approvals</div><div class="dash-subtitle">Review and approve new listings</div></div>
+        ${[['BMW S1000RR','LKR 12,500,000','Nisal D.','Colombo','Submitted 2h ago'],['Porsche 911 GT3','LKR 98,000,000','Thilina W.','Gampaha','Submitted 5h ago'],['Aprilia RSV4','LKR 9,800,000','Kasun P.','Kandy','Submitted 1d ago']].map(([v,p,s,l,t])=>`<div style="background:var(--dark-card);border:1px solid var(--glass-border);border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem"><div><div style="font-weight:700;margin-bottom:0.25rem">${v}</div><div style="font-size:0.88rem;color:var(--primary-yellow);margin-bottom:0.25rem">${p}</div><div style="font-size:0.78rem;color:var(--text-muted-dark)">by ${s} · ${l} · ${t}</div></div><div style="display:flex;gap:0.5rem"><button class="btn btn-ghost" onclick="showToast('👁️','Reviewing listing')" style="font-size:0.78rem;padding:0.4rem 0.75rem">View</button><button class="btn btn-primary" onclick="showToast('✅','Listing approved!')" style="font-size:0.78rem;padding:0.4rem 0.75rem">Approve</button><button class="btn btn-ghost" onclick="showToast('❌','Listing rejected')" style="font-size:0.78rem;padding:0.4rem 0.75rem;border-color:rgba(255,45,85,0.3);color:var(--primary-yellow)">Reject</button></div></div>`).join('')}
+      </div>
+      <div id="admin-users" style="display:none">
+        <div class="dash-header"><div class="dash-title">User Management</div></div>
+        <div class="table-card">
+          <table class="data-table">
+            <thead><tr><th>User</th><th>Role</th><th>Listings</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${[['Amara Perera','Seller','8','Jan 2024','active'],['Kavindu R.','Buyer','—','Mar 2024','active'],['Dilshan S.','Seller','3','Feb 2024','active'],['Unknown User','Seller','1','May 2025','rejected']].map(([n,r,l,j,s])=>`<tr><td style="font-weight:600">${n}</td><td style="color:var(--text-secondary-dark)">${r}</td><td style="color:var(--primary-yellow)">${l}</td><td style="color:var(--text-muted-dark);font-size:0.82rem">${j}</td><td><span class="status-badge status-${s}">${s}</span></td><td><button class="btn btn-ghost" style="padding:0.3rem 0.6rem;font-size:0.75rem;${s==='active'?'border-color:rgba(255,45,85,0.3);color:var(--primary-yellow)':'color:var(--primary-yellow)'}" onclick="showToast('${s==='active'?'🔒':'🔓'}','User ${s==='active'?'banned':'unbanned'}!')">${s==='active'?'Ban':'Unban'}</button></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="admin-payments" style="display:none">
+        <div class="dash-header"><div class="dash-title">Revenue Dashboard</div></div>
+        <div class="metrics-grid">
+          <div class="metric-card blue"><div class="metric-label">Total Revenue</div><div class="metric-value">14.2M</div><div class="metric-change">LKR all-time</div></div>
+          <div class="metric-card gold"><div class="metric-label">This Month</div><div class="metric-value">2.4M</div><div class="metric-change up">↑ +18%</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-header"><div class="table-card-title">Recent Transactions</div></div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Seller</th><th>Package</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
+            <tbody>
+              ${[['#TX-889','Amara P.','Premium','9,900','PayHere','15 May'],['#TX-888','Thilina W.','Featured','4,500','Stripe','15 May'],['#TX-887','Nisal D.','Basic','1,500','PayHere','14 May']].map(([id,s,pkg,amt,m,d])=>`<tr><td style="font-family:'Orbitron',monospace;font-size:0.78rem;color:var(--primary-yellow)">${id}</td><td>${s}</td><td>${pkg}</td><td style="font-weight:700;color:var(--primary-yellow)">LKR ${amt}</td><td style="color:var(--text-secondary-dark)">${m}</td><td style="color:var(--text-muted-dark);font-size:0.82rem">${d}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="admin-reports" style="display:none">
+        <div class="dash-header"><div class="dash-title">Reported Listings</div></div>
+        ${[['Kawasaki Clone','Suspected fraud — photos don\'t match VIN','3 reports','Under Review'],['Unknown Supercar','No valid import docs provided','1 report','Pending']].map(([v,r,c,s])=>`<div style="background:var(--dark-card);border:1px solid rgba(255,45,85,0.2);border-radius:12px;padding:1.25rem;margin-bottom:0.75rem"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem"><div style="font-weight:700">${v}</div><span class="badge badge-premium">${c}</span></div><div style="font-size:0.85rem;color:var(--text-secondary-dark);margin-bottom:0.75rem">${r}</div><div style="display:flex;gap:0.5rem"><button class="btn btn-ghost" style="font-size:0.78rem;padding:0.35rem 0.75rem" onclick="showToast('✅','Listing cleared')">Clear</button><button class="btn btn-danger" style="font-size:0.78rem;padding:0.35rem 0.75rem" onclick="showToast('🚫','Listing removed')">Remove Listing</button></div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST AD PAGE -->
+<div id="page-post" class="page">
+  <div style="max-width:800px;margin:0 auto;padding:2rem">
+    <div style="margin-bottom:2rem">
+      <div class="section-label">📝 New Advertisement</div>
+      <h1 style="font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900">Post Your Vehicle</h1>
+      <p style="color:var(--text-muted);margin-top:0.5rem">Fill in the details below to create your listing.</p>
+    </div>
+    <div class="post-form">
+      <div class="form-section">
+        <div class="form-section-title">🚗 Vehicle Information</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Vehicle Type</label><select class="form-control"><option>Superbike</option><option>Supercar</option></select></div>
+          <div class="form-group"><label class="form-label">Brand</label><select class="form-control"><option>Kawasaki</option><option>Ducati</option><option>Yamaha</option><option>Honda</option><option>Ferrari</option><option>Lamborghini</option><option>Porsche</option></select></div>
+          <div class="form-group"><label class="form-label">Model</label><input class="form-control" placeholder="e.g. Ninja H2, Panigale V4"></div>
+          <div class="form-group"><label class="form-label">Year</label><input class="form-control" type="number" placeholder="2023"></div>
+          <div class="form-group"><label class="form-label">Engine (cc)</label><input class="form-control" placeholder="998"></div>
+          <div class="form-group"><label class="form-label">Mileage (km)</label><input class="form-control" placeholder="5,000"></div>
+          <div class="form-group"><label class="form-label">Condition</label><select class="form-control"><option>Brand New</option><option>Reconditioned</option><option>Used - Excellent</option><option>Used - Good</option></select></div>
+          <div class="form-group"><label class="form-label">Transmission</label><select class="form-control"><option>Manual</option><option>Automatic</option><option>Semi-Automatic</option></select></div>
+          <div class="form-group"><label class="form-label">Color</label><input class="form-control" placeholder="Metallic Black"></div>
+          <div class="form-group"><label class="form-label">Location</label><select class="form-control"><option>Ampara</option><option>Anuradhapura</option><option>Badulla</option><option>Batticaloa</option><option>Colombo</option><option>Galle</option><option>Gampaha</option><option>Hambantota</option><option>Jaffna</option><option>Kalutara</option><option>Kandy</option><option>Kegalle</option><option>Kilinochchi</option><option>Kurunegala</option><option>Mannar</option><option>Matale</option><option>Matara</option><option>Moneragala</option><option>Mullaitivu</option><option>Nuwara Eliya</option><option>Polonnaruwa</option><option>Puttalam</option><option>Ratnapura</option><option>Trincomalee</option><option>Vavuniya</option></select></div>
+          <div class="form-group"><label class="form-label">Price (LKR)</label><input class="form-control" type="number" placeholder="18,500,000"></div>
+          <div class="form-group"><label class="form-label">Negotiable</label><select class="form-control"><option>Yes</option><option>No</option><option>Fixed Price</option></select></div>
+          <div class="form-group full"><label class="form-label">Description</label><textarea class="form-control" rows="5" placeholder="Describe your vehicle in detail — condition, modifications, service history, accessories included..."></textarea></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📸 Photos & Videos</div>
+        <div class="upload-zone">
+          <div class="upload-icon">📸</div>
+          <div style="font-weight:600;margin-bottom:0.5rem">Drag & drop photos here</div>
+          <div style="color:var(--text-muted);font-size:0.85rem">Up to 20 photos · JPG, PNG, WebP · Max 10MB each</div>
+          <button class="btn btn-ghost" style="margin-top:1rem">Browse Files</button>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">💎 Choose Your Package</div>
+        <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:0.5rem">Your ad will only go live after payment is confirmed.</p>
+        <div class="packages-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="package" onclick="selectPkg(this,'basic')"><div class="pkg-name">Basic</div><div class="pkg-price">LKR 1,500</div><div class="pkg-feature">✔ 30-day listing</div><div class="pkg-feature">✔ Standard rank</div><div class="pkg-feature">✔ Email alerts</div></div>
+          <div class="package featured-pkg selected" onclick="selectPkg(this,'featured')"><div class="pkg-badge">Popular</div><div class="pkg-name" style="color:var(--primary-yellow)">Featured</div><div class="pkg-price" style="color:var(--primary-yellow)">LKR 4,500</div><div class="pkg-feature">✔ 45-day listing</div><div class="pkg-feature">✔ Category top</div><div class="pkg-feature">✔ Homepage slot</div></div>
+          <div class="package" onclick="selectPkg(this,'premium')"><div class="pkg-name" style="color:var(--primary-yellow)">Premium</div><div class="pkg-price" style="color:var(--primary-yellow)">LKR 9,900</div><div class="pkg-feature">✔ 60-day listing</div><div class="pkg-feature">✔ Hero banner</div><div class="pkg-feature">✔ Priority support</div></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">💳 Payment</div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+          <button class="btn btn-primary" style="font-size:1rem;padding:0.85rem 2rem" onclick="showToast('💳','Redirecting to PayHere...')">🇱🇰 Pay with PayHere</button>
+          <button class="btn btn-ghost" style="font-size:1rem;padding:0.85rem 2rem" onclick="showToast('💳','Redirecting to Stripe...')">💳 Pay with Stripe</button>
+        </div>
+        <p style="color:var(--text-muted);font-size:0.78rem;margin-top:0.75rem">Your ad will be reviewed within 24 hours after payment. Invoice will be emailed automatically.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div class="modal-logo">⚡ CEYLONSUPER</div>
+    <div class="modal-title" id="modalTitle">Welcome Back</div>
+    <div class="modal-subtitle" id="modalSubtitle">Sign in to your account</div>
+    <div class="modal-form">
+      <div id="signupNameField" style="display:none"><input class="modal-input" placeholder="Full Name"></div>
+      <input class="modal-input" placeholder="Email address" type="email">
+      <input class="modal-input" placeholder="Password" type="password">
+      <button class="btn btn-primary" style="font-size:1rem;padding:0.85rem" onclick="showToast('✅','Logged in successfully!')">Sign In</button>
+      <div class="modal-divider">or</div>
+      <button class="google-btn" onclick="showToast('🔵','Google auth initiated...')"><span>G</span> Continue with Google</button>
+      <div class="modal-footer" id="modalFooter">Don't have an account? <a onclick="switchModal()">Sign Up</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✅</span>
+  <span class="toast-text" id="toastText">Action completed!</span>
+</div>
+
+<!-- Chat Bubble -->
+<div class="chat-bubble" id="liveChatBubble" onclick="openLiveChat()" title="Live Chat">💬</div>
+
+
+<script>
+const vehicles = [
+  {id:1,type:'bike',title:'Kawasaki Ninja H2',price:'LKR 18,500,000',img:'🏍️',year:'2023',mileage:'3,200 km',loc:'Colombo',badge:'premium',seller:'AP',fav:false},
+  {id:2,type:'bike',title:'Ducati Panigale V4S',price:'LKR 22,500,000',img:'🏍️',year:'2024',mileage:'1,100 km',loc:'Kandy',badge:'featured',seller:'DM',fav:false},
+  {id:3,type:'bike',title:'Yamaha R1 M Edition',price:'LKR 8,900,000',img:'🏍️',year:'2022',mileage:'6,800 km',loc:'Galle',badge:'new',seller:'RP',fav:false},
+  {id:4,type:'car',title:'Lamborghini Huracán',price:'LKR 185,000,000',img:'🏎️',year:'2022',mileage:'8,400 km',loc:'Colombo',badge:'premium',seller:'TW',fav:false},
+  {id:5,type:'car',title:'Nissan GT-R R35',price:'LKR 45,000,000',img:'🏎️',year:'2021',mileage:'12,000 km',loc:'Gampaha',badge:'featured',seller:'KP',fav:false},
+  {id:6,type:'car',title:'Porsche 911 GT3',price:'LKR 98,000,000',img:'🏎️',year:'2023',mileage:'2,100 km',loc:'Colombo',badge:'premium',seller:'NJ',fav:false},
+  {id:7,type:'bike',title:'Honda CBR1000RR-R',price:'LKR 6,200,000',img:'🏍️',year:'2021',mileage:'9,500 km',loc:'Negombo',badge:'new',seller:'RK',fav:false},
+  {id:8,type:'car',title:'Ferrari 488 GTB',price:'LKR 220,000,000',img:'🏎️',year:'2020',mileage:'5,800 km',loc:'Colombo',badge:'premium',seller:'SA',fav:false},
+];
+
+function makeCard(v,onclick='goTo(\'detail\')',small=false){
+  return `<div class="vehicle-card" onclick="${onclick}">
+
+    <div class="card-img-placeholder">${v.img}</div>
+    <div class="card-badges"><span class="badge badge-${v.badge}">${v.badge==='premium'?'⭐ Premium':v.badge==='featured'?'🔥 Featured':'✨ New'}</span></div>
+
+    <div class="card-fav ${v.fav?'active':''}" onclick="event.stopPropagation();toggleFav(${v.id},this)" title="Save">♥</div>
+    <div class="card-body">
+      <div class="card-title">${v.title}</div>
+      <div class="card-price">${v.price}</div>
+      <div class="card-meta">
+        <span class="card-meta-item">📅 ${v.year}</span>
+        <span class="card-meta-item">📏 ${v.mileage}</span>
+        <span class="card-meta-item">📍 ${v.loc}</span>
+      </div>
+      <div class="card-seller">
+        <div class="card-seller-name">Seller: ${v.seller}</div>
+        <div class="card-location">📍 ${v.loc}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleFav(id,el){
+  const v=vehicles.find(x=>x.id===id);
+  if(v){v.fav=!v.fav;el.classList.toggle('active');showToast(v.fav?'❤️':'🤍',v.fav?'Added to favorites':'Removed from favorites')}
+}
+
+document.getElementById('bikesGrid').innerHTML=vehicles.filter(v=>v.type==='bike').map(v=>makeCard(v)).join('');
+document.getElementById('carsGrid').innerHTML=vehicles.filter(v=>v.type==='car').slice(0,3).map(v=>makeCard(v)).join('');
+document.getElementById('listingsGrid').innerHTML=vehicles.map(v=>makeCard(v)).join('');
+document.getElementById('similarGrid').innerHTML=vehicles.slice(0,3).map(v=>makeCard(v,'',false)).join('');
+
+const brands = [
+  {name:'Ducati',emoji:'🔴',type:'bike',count:34,hot:true},
+  {name:'Kawasaki',emoji:'🟢',type:'bike',count:28,hot:false},
+  {name:'Yamaha',emoji:'🔵',type:'bike',count:41,hot:false},
+  {name:'Honda',emoji:'⚪',type:'bike',count:52,hot:false},
+  {name:'Aprilia',emoji:'🟠',type:'bike',count:11,hot:false,isnew:true},
+  {name:'Suzuki',emoji:'🟡',type:'bike',count:19,hot:false},
+  {name:'Ferrari',emoji:'🐎',type:'car',count:8,hot:true},
+  {name:'Lamborghini',emoji:'🐂',type:'car',count:6,hot:true},
+  {name:'Porsche',emoji:'🏇',type:'car',count:14,hot:false},
+  {name:'Nissan GTR',emoji:'🦅',type:'car',count:22,hot:false},
+  {name:'McLaren',emoji:'🧡',type:'car',count:4,hot:false,isnew:true},
+  {name:'BMW M',emoji:'⚡',type:'car',count:18,hot:false},
+];
+
+const marqueeItems = [...brands, ...brands];
+
+function renderBrands(filter) {
+  const filtered = filter === 'all' ? brands : brands.filter(b => b.type === filter);
+  document.getElementById('brandsGrid').innerHTML = filtered.map(b => `
+    <div class="brand-card${b.hot?' hot':''}">
+      ${b.hot ? '<div class="brand-hot-badge">Hot</div>' : ''}
+      ${b.isnew ? '<div class="brand-new-badge">New</div>' : ''}
+      <div class="brand-logo-wrap">${b.emoji}</div>
+      <div class="brand-name">${b.name}</div>
+    </div>
+  `).join('');
+}
+
+function filterBrands(type, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderBrands(type);
+}
+
+document.getElementById('marquee').innerHTML = marqueeItems.map(b => `
+  <div class="marquee-item">
+    <div class="marquee-dot${b.hot?' red':''}"></div>
+    <span class="marquee-label">${b.emoji} ${b.name} · ${b.count} ads</span>
+  </div>
+`).join('');
+
+// Initialize display
+renderBrands('all');
+
+
+// Detail specs
+const specs=[['Engine','998cc I4 Supercharged'],['Power','231 hp'],['Torque','141 Nm'],['0-100','2.8 seconds'],['Top Speed','299 km/h'],['Weight','238 kg'],['Year','2023'],['Mileage','3,200 km'],['Condition','Reconditioned'],['Transmission','Manual 6-speed'],['Color','Metallic Silver'],['Origin','Japan Import']];
+document.getElementById('specsGrid').innerHTML=specs.map(([k,v])=>`<div class="spec-item"><div class="spec-key">${k}</div><div class="spec-val">${v}</div></div>`).join('');
+
+// Gallery thumbs
+const emojis=['🏍️','🏍️','🔧','📊','🏁'];
+document.getElementById('galleryThumbs').innerHTML=emojis.map((e,i)=>`<div class="gallery-thumb ${i===0?'active':''}" onclick="selectThumb(this,'${e}')">${e}</div>`).join('');
+
+function selectThumb(el,em){
+  document.querySelectorAll('.gallery-thumb').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('galleryMain').innerHTML=`<div style="font-size:8rem">${em}</div>`;
+}
+
+// Navigation
+function goTo(page, vehicleId = null){
+  // Push state so browser back/forward navigates between pages without changing history unexpectedly.
+  // Use replaceState if the current state already matches.
+  const url = new URL(window.location.href);
+  url.searchParams.set('page', page);
+  if(vehicleId !== null && vehicleId !== undefined){
+    url.searchParams.set('vehicleId', String(vehicleId));
+  }else{
+    url.searchParams.delete('vehicleId');
+  }
+
+  const current = window.history.state || {};
+  const matches = current.page === page && String(current.vehicleId ?? '') === String(vehicleId ?? '');
+  if(!matches){
+    window.history.pushState({page, vehicleId}, '', url.toString());
+  }
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const target=document.getElementById('page-'+page);
+  if(target){target.classList.add('active');window.scrollTo(0,0)}
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+
+  // Highlight the corresponding nav link if it exists
+  const navLink = document.querySelector(`.nav-link[onclick*="goTo('${page}'"]`);
+  if(navLink){navLink.classList.add('active');}
+
+  // Load vehicle details if going to detail page
+  if(page === 'detail' && vehicleId){
+    loadVehicleDetail(vehicleId);
+  }
+}
+
+
+function loadVehicleDetail(vehicleId){
+  const vehicle = vehicles.find(v => v.id === vehicleId);
+  if(!vehicle) return;
+  
+  // Update detail page elements
+  document.getElementById('detailBadge').innerHTML = `🏍️ ${vehicle.type === 'bike' ? 'Superbike' : 'Supercar'} · ${vehicle.badge === 'premium' ? '⭐ Premium' : vehicle.badge === 'featured' ? '🔥 Featured' : '✨ New'}`;
+  document.getElementById('detailTitle').textContent = vehicle.title;
+  document.getElementById('detailPrice').textContent = vehicle.price;
+  document.getElementById('galleryMain').innerHTML = `<div style="font-size:8rem">${vehicle.img}</div>`;
+  
+  // Update specs based on vehicle type
+  const specs = vehicle.type === 'bike' ? [
+    ['Engine', '998cc I4 Supercharged'],
+    ['Power', '231 hp'],
+    ['Torque', '141 Nm'],
+    ['0-100', '2.8 seconds'],
+    ['Top Speed', '299 km/h'],
+    ['Weight', '238 kg'],
+    ['Year', vehicle.year],
+    ['Mileage', vehicle.mileage],
+    ['Condition', 'Reconditioned'],
+    ['Transmission', 'Manual 6-speed'],
+    ['Color', 'Metallic Silver'],
+    ['Origin', 'Japan Import']
+  ] : [
+    ['Engine', '6.5L V12'],
+    ['Power', '730 hp'],
+    ['Torque', '690 Nm'],
+    ['0-100', '2.9 seconds'],
+    ['Top Speed', '355 km/h'],
+    ['Weight', '1,420 kg'],
+    ['Year', vehicle.year],
+    ['Mileage', vehicle.mileage],
+    ['Condition', 'Excellent'],
+    ['Transmission', 'Automatic 7-speed'],
+    ['Color', ' Rosso Corsa'],
+    ['Origin', 'Italy Import']
+  ];
+  
+  document.getElementById('specsGrid').innerHTML = specs.map(([k,v])=>`<div class="spec-item"><div class="spec-key">${k}</div><div class="spec-val">${v}</div></div>`).join('');
+}
+
+// Tabs
+function switchTab(el,id){
+  const parent=el.closest('.tabs');
+  parent.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const contents=document.querySelectorAll(`#${id}`);
+  document.querySelectorAll('.tab-content').forEach(tc=>tc.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Seller Dashboard
+function sellerTab(id,el){
+  document.querySelectorAll('#page-seller .dash-nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  ['overview','listings','inquiries','payments','profile'].forEach(t=>{
+    const el2=document.getElementById('seller-'+t);
+    if(el2)el2.style.display=t===id?'block':'none';
+  });
+}
+
+// Admin Dashboard
+function adminTab(id,el){
+  document.querySelectorAll('#page-admin .dash-nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  ['analytics','approve','users','payments','reports'].forEach(t=>{
+    const el2=document.getElementById('admin-'+t);
+    if(el2)el2.style.display=t===id?'block':'none';
+  });
+}
+
+// Filters
+function toggleChip(el){
+  const container = el.parentElement;
+  const isLocationFilter = container.classList.contains('filter-chips-scroll');
+
+  if (isLocationFilter) {
+    // Special handling for location chips
+    if (el.textContent === 'All') {
+      // If "All" is clicked, make it active and deactivate all others
+      container.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.classList.remove('active');
+      });
+      el.classList.add('active');
+    } else {
+      // If a specific location is clicked
+      const allChip = container.querySelector('.filter-chip:first-child'); // "All" chip
+      allChip.classList.remove('active'); // Deactivate "All"
+      el.classList.toggle('active');
+
+      // If no locations are selected, reactivate "All"
+      const activeLocations = container.querySelectorAll('.filter-chip.active:not(:first-child)');
+      if (activeLocations.length === 0) {
+        allChip.classList.add('active');
+      }
+    }
+  } else {
+    // Default behavior for other chip groups
+    el.classList.toggle('active');
+  }
+}
+
+// Modal
+function openModal(type){
+  const m=document.getElementById('authModal');
+  m.classList.add('open');
+  const isLogin=type==='login';
+  document.getElementById('modalTitle').textContent=isLogin?'Welcome Back':'Create Account';
+  document.getElementById('modalSubtitle').textContent=isLogin?'Sign in to your account':'Join the CeylonSuper community';
+  document.getElementById('signupNameField').style.display=isLogin?'none':'block';
+  document.getElementById('modalFooter').innerHTML=isLogin?"Don't have an account? <a onclick='switchModal()'>Sign Up</a>":"Already have an account? <a onclick='switchModal()'>Sign In</a>";
+}
+function closeModal(e){if(e.target===document.getElementById('authModal'))closeModalDirect()}
+function closeModalDirect(){document.getElementById('authModal').classList.remove('open')}
+function switchModal(){
+  const title=document.getElementById('modalTitle').textContent;
+  openModal(title==='Welcome Back'?'signup':'login');
+}
+
+// Package selection
+function selectPkg(el,type){
+  document.querySelectorAll('.package').forEach(p=>p.classList.remove('selected'));
+  el.classList.add('selected');
+  showToast('📦',`${type.charAt(0).toUpperCase()+type.slice(1)} package selected`);
+}
+
+// Toast
+let toastTimer;
+function showToast(icon,text){
+  clearTimeout(toastTimer);
+  document.getElementById('toastIcon').textContent=icon;
+  document.getElementById('toastText').textContent=text;
+  const t=document.getElementById('toast');
+  t.classList.add('show');
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// EMI Calc
+function calcEMI(){
+  const priceText = document.getElementById('detailPrice').textContent;
+  const price = parseInt(priceText.replace(/[^\d]/g, '')) || 18500000;
+  const down=parseFloat(document.getElementById('downPct').value)||20;
+  const months=parseFloat(document.getElementById('loanTerm').value)||60;
+  const rate=parseFloat(document.getElementById('interestRate').value)||12;
+  const principal=price*(1-down/100);
+  const monthly_rate=rate/12/100;
+  const emi=principal*(monthly_rate*Math.pow(1+monthly_rate,months))/(Math.pow(1+monthly_rate,months)-1);
+  document.getElementById('emiResult').textContent='LKR '+Math.round(emi).toLocaleString();
+}
+
+// Counter animation
+function animateCounter(el,target,prefix='',suffix=''){
+  let cur=0;const step=target/60;
+  const t=setInterval(()=>{
+    cur=Math.min(cur+step,target);
+    el.textContent=prefix+Math.round(cur).toLocaleString()+suffix;
+    if(cur>=target)clearInterval(t);
+  },25);
+}
+setTimeout(()=>{
+  animateCounter(document.getElementById('c1'),1247);
+  animateCounter(document.getElementById('c2'),389);
+  animateCounter(document.getElementById('c3'),5083);
+  animateCounter(document.getElementById('c4'),4721);
+},300);
+
+// Live Chat (frontend-only)
+function openLiveChat(){
+  // Simple in-page chat widget using prompt/alert to keep this file self-contained.
+  // If you later replace with a real backend, keep this function as the entry point.
+  try{
+    const bubble=document.getElementById('liveChatBubble');
+    if(bubble){bubble.classList.add('active')}
+
+    const name=(window.localStorage.getItem('chatName')||'').trim();
+    let userName=name;
+    if(!userName){
+      userName=prompt('Your name (for this demo chat):','Guest');
+      if(!userName) userName='Guest';
+      window.localStorage.setItem('chatName', userName);
+    }
+
+    const firstMsg=prompt('Type your message to CeylonSuper:','Hi! I need help with listings');
+    if(!firstMsg) return;
+
+    showToast('💬','Message sent (demo)');
+    const response=`Thanks ${userName}!\n\nWe received: "${firstMsg}"\n\nAgent: We will get back to you shortly (demo).`;
+    alert(response);
+  }finally{
+    const bubble=document.getElementById('liveChatBubble');
+    if(bubble){bubble.classList.remove('active')}
+  }
+}
+</script>
+</body>
+</html>
+

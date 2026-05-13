@@ -1,0 +1,83 @@
+var(--text-muted);border-bottom:2px solid transparent;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px}
+.tab.active{color:var(--primary-yellow);border-bottom-color:var(--primary-yellow)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Section label */
+.section-label{display:inline-flex;align-items:center;gap:0.5rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:3px;color:var(--primary-yellow);margin-bottom:0.75rem;font-weight:700}
+.section-label::before{content:'';width:20px;height:2px;background:var(--primary-yellow)}
+/* Admin chart mock */
+.chart-bar-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem}
+.chart-label{font-size:0.78rem;color:var(--text-secondary-dark);width:80px;text-align:right}
+.chart-bar-track{flex:1;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary-yellow),var(--accent-black));transition:width 1s ease}
+.chart-val{font-size:0.78rem;color:var(--text-muted-dark);width:40px}
+/* Progress ring */
+.progress-ring{display:flex;align-items:center;gap:1rem}
+.ring{width:60px;height:60px;flex-shrink:0}
+/* Smooth transitions */
+.page{animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* Mobile responsive */
+@media(max-width:768px){
+.nav-links{display:none}
+.listings-layout{grid-template-columns:1fr}
+.filters-panel{position:static}
+.detail-layout{grid-template-columns:1fr}
+.seller-card{position:static}
+.dash-layout{grid-template-columns:1fr}
+.dash-sidebar{height:auto;position:static;display:flex;flex-wrap:wrap;padding:0.5rem;border-right:none;border-bottom:1px solid var(--glass-border)}
+.dash-nav-item{border-left:none;border-bottom:3px solid transparent;flex-direction:column;gap:0.25rem;padding:0.5rem 0.75rem;font-size:0.72rem}
+.dash-nav-item.active{border-bottom-color:var(--primary-yellow);border-left:none}
+.packages-grid{grid-template-columns:1fr}
+.footer-grid{grid-template-columns:1fr 1fr}
+}
+/* (moved/handled in the main head) */
+/* @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&display=swap'); */
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--dark-bg);font-family:'Rajdhani',sans-serif}
+
+.brands-section{padding:4rem 2rem;background:var(--dark-bg);overflow:hidden;color:var(--text-primary)}
+.brand-section-sub,.brands-section .section-sub{color:var(--text-muted-dark)}
+
+.brands-section .section-title{color:var(--text-primary)}
+.section-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:0.6rem}
+.eyebrow-line{width:28px;height:2px;background:var(--primary-yellow)}
+.eyebrow-text{font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--primary-yellow);font-weight:700}
+.section-title{font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;color:var(--text-primary);margin-bottom:0.4rem}
+.section-sub{font-size:0.88rem;color:var(--text-muted-dark);margin-bottom:2.5rem}
+
+
+
+.tabs-row{display:flex;gap:0;margin-bottom:2rem;border-bottom:1px solid rgba(255,255,255,0.07)}
+.tab-btn{padding:0.6rem 1.4rem;font-family:'Rajdhani',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#8899aa;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;margin-bottom:-1px}
+.tab-btn.active{color:var(--primary-yellow);border-bottom-color:var(--primary-yellow)}
+.tab-btn:hover:not(.active){color:#f0f4ff}
+
+.brands-track{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem}
+.brand-card{position:relative;background:#0d1526;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1.5rem 1rem 1.25rem;text-align:center;cursor:pointer;transition:all 0.25s;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:0.6rem}
+.brand-card::before{content:'';position:absolute;inset:0;border-radius:14px;opacity:0;transition:opacity 0.25s;pointer-events:none}
+.brand-card:hover{border-color:rgba(255,255,0,0.35);transform:translateY(-4px)}
+.brand-card:hover::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(255,255,0,0.07) 0%,transparent 70%)}
+.brand-card.hot{border-color:rgba(255,45,85,0.25)}
+.brand-card.hot:hover{border-color:rgba(255,45,85,0.5)}
+.brand-card.hot::before{background:radial-gradient(ellipse at 50% 0%,rgba(255,45,85,0.07) 0%,transparent 70%)}
+
+.brand-logo-wrap{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:#111827;border:1px solid rgba(255,255,255,0.06);transition:all 0.25s;flex-shrink:0}
+.brand-card:hover .brand-logo-wrap{border-color:rgba(255,255,0,0.3);background:#0a1a2e}
+.brand-card.hot:hover .brand-logo-wrap{border-color:rgba(255,45,85,0.3)}
+
+.brand-name{font-family:'Orbitron',monospace;font-size:0.65rem;font-weight:700;color:#aabbcc;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.2s;line-height:1.3}
+.brand-card:hover .brand-name{color:var(--primary-yellow)}
+.brand-card.hot:hover .brand-name{color:#ff2d55}
+
+.brand-count{font-size:0.68rem;color:#445566;font-weight:600}
+.brand-card:hover .brand-count{color:#8899aa}
+
+.brand-hot-badge{position:absolute;top:8px;right:8px;background:#ff2d55;color:#fff;font-size:0.55rem;font-weight:700;padding:2px 6px;border-radius:100px;letter-spacing:1px;text-transform:uppercase}
+.brand-new-badge{position:absolute;top:8px;right:8px;background:var(--primary-yellow);color:#000;font-size:0.55rem;font-weight:700;padding:2px 6px;border-radius:100px;letter-spacing:1px;text-transform:uppercase}
+
+.marquee-wrapper{overflow:hidden;margin-top:2rem;padding:1rem 0;border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)}
+.marquee-track{display:flex;gap:2.5rem;width:max-content;animation:scroll 22s linear infinite}
+.marquee-track:hover{animation-play-state:paused}
+.mar
