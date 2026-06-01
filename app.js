@@ -288,14 +288,17 @@ let currentFilters = {
 let viewMode = "list"; // list or grid
 let activeStep = 1;
 let uploadedImages = [];
+let activeCustomSelect = null;
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
     initDatabase();
     bindEvents();
+    initCustomSelects();
     renderSidebarCounts();
     renderListings();
     updateFavBadge();
+    initHeroBackgroundInteraction();
 });
 
 // Database Init
@@ -308,7 +311,7 @@ function initDatabase() {
         ads = [...PRELOADED_ADS];
         localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
     }
-    
+
     // Check favorites
     const savedFavs = localStorage.getItem("ceylonsuper_favorites");
     if (savedFavs) {
@@ -402,6 +405,29 @@ function bindEvents() {
             switchView(view);
         });
     });
+
+    // Mobile navigation toggle
+    const mobileNavToggle = document.getElementById("mobile-nav-toggle");
+    const mainNavigation = document.getElementById("main-navigation");
+    if (mobileNavToggle && mainNavigation) {
+        mobileNavToggle.addEventListener("click", () => {
+            setMobileNavOpen(!mainNavigation.classList.contains("is-open"));
+        });
+
+        mainNavigation.querySelectorAll("[data-target-view]").forEach(item => {
+            item.addEventListener("click", () => setMobileNavOpen(false));
+        });
+
+        document.addEventListener("click", (event) => {
+            if (!mainNavigation.classList.contains("is-open")) return;
+            if (mainNavigation.contains(event.target) || mobileNavToggle.contains(event.target)) return;
+            setMobileNavOpen(false);
+        });
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth > 780) setMobileNavOpen(false);
+        });
+    }
 
     // View Toggles
     const listBtn = document.getElementById("view-list-btn");
@@ -562,7 +588,7 @@ function bindEvents() {
         btn.addEventListener("click", () => {
             document.querySelectorAll("[data-profile-tab]").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            
+
             const tabName = btn.getAttribute("data-profile-tab");
             document.querySelectorAll(".profile-tab-panel").forEach(panel => {
                 if (panel.id === `panel-${tabName}`) {
@@ -610,8 +636,100 @@ function bindEvents() {
     }
 }
 
+function setMobileNavOpen(isOpen) {
+    const mobileNavToggle = document.getElementById("mobile-nav-toggle");
+    const mainNavigation = document.getElementById("main-navigation");
+    if (!mobileNavToggle || !mainNavigation) return;
+
+    mainNavigation.classList.toggle("is-open", isOpen);
+    mobileNavToggle.classList.toggle("is-open", isOpen);
+    mobileNavToggle.setAttribute("aria-expanded", String(isOpen));
+
+    const icon = mobileNavToggle.querySelector("i");
+    if (icon) {
+        icon.className = isOpen ? "fas fa-times" : "fas fa-bars";
+    }
+}
+
+function initHeroBackgroundInteraction() {
+    const hero = document.querySelector(".hero-section");
+    if (!hero) return;
+
+    let animationFrame = 0;
+    let interactionTimer = 0;
+
+    const px = value => `${value.toFixed(2)}px`;
+
+    const applyHeroPointer = (xPercent, yPercent) => {
+        const clampedX = Math.max(0, Math.min(100, xPercent));
+        const clampedY = Math.max(0, Math.min(100, yPercent));
+        const xDelta = (clampedX - 50) / 50;
+        const yDelta = (clampedY - 50) / 50;
+
+        hero.style.setProperty("--hero-pointer-x", `${clampedX.toFixed(1)}%`);
+        hero.style.setProperty("--hero-pointer-y", `${clampedY.toFixed(1)}%`);
+        hero.style.setProperty("--hero-parallax-soft-x", px(xDelta * -8));
+        hero.style.setProperty("--hero-parallax-soft-y", px(yDelta * -6));
+        hero.style.setProperty("--hero-parallax-grid-x", px(xDelta * 10));
+        hero.style.setProperty("--hero-parallax-grid-y", px(yDelta * 8));
+        hero.style.setProperty("--hero-parallax-floor-x", px(xDelta * -5));
+        hero.style.setProperty("--hero-parallax-floor-y", px(yDelta * -4));
+        hero.style.setProperty("--hero-parallax-near-x", px(xDelta * 16));
+        hero.style.setProperty("--hero-parallax-near-y", px(yDelta * 10));
+        hero.style.setProperty("--hero-parallax-far-x", px(xDelta * -14));
+        hero.style.setProperty("--hero-parallax-far-y", px(yDelta * 12));
+        hero.style.setProperty("--hero-parallax-gauge-x", px(xDelta * 8));
+        hero.style.setProperty("--hero-parallax-gauge-y", px(yDelta * -8));
+    };
+
+    const queuePointerUpdate = (clientX, clientY) => {
+        const rect = hero.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        const xPercent = ((clientX - rect.left) / rect.width) * 100;
+        const yPercent = ((clientY - rect.top) / rect.height) * 100;
+
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        animationFrame = requestAnimationFrame(() => {
+            applyHeroPointer(xPercent, yPercent);
+            animationFrame = 0;
+        });
+    };
+
+    const markInteracting = () => {
+        hero.classList.add("is-interacting");
+        window.clearTimeout(interactionTimer);
+        interactionTimer = window.setTimeout(() => {
+            hero.classList.remove("is-interacting");
+        }, 650);
+    };
+
+    hero.addEventListener("pointermove", event => {
+        queuePointerUpdate(event.clientX, event.clientY);
+    }, { passive: true });
+
+    hero.addEventListener("pointerdown", event => {
+        queuePointerUpdate(event.clientX, event.clientY);
+        markInteracting();
+    }, { passive: true });
+
+    hero.addEventListener("touchmove", event => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        queuePointerUpdate(touch.clientX, touch.clientY);
+        markInteracting();
+    }, { passive: true });
+
+    hero.addEventListener("pointerleave", () => {
+        applyHeroPointer(50, 48);
+        hero.classList.remove("is-interacting");
+    }, { passive: true });
+}
+
 // Switch SPA views
 function switchView(viewName) {
+    setMobileNavOpen(false);
+
     // Update active nav links
     document.querySelectorAll("[data-target-view]").forEach(link => {
         if (link.getAttribute("data-target-view") === viewName) {
@@ -625,7 +743,7 @@ function switchView(viewName) {
     const homeLayout = document.getElementById("home-layout-section");
     const postAdSection = document.getElementById("post-ad-section");
     const profileSection = document.getElementById("profile-section");
-    
+
     if (viewName === "home") {
         homeLayout.style.display = "block";
         postAdSection.classList.remove("active");
@@ -687,7 +805,7 @@ function renderProfileView() {
     // 1. Profile Left Card details
     document.getElementById("profile-card-name").innerText = profile.name;
     document.getElementById("profile-card-bio").innerText = profile.bio || "No bio added yet.";
-    
+
     const avatarContainer = document.getElementById("profile-card-avatar-container");
     if (avatarContainer) {
         avatarContainer.innerHTML = `<img src="${profile.avatar}" alt="${profile.name}">`;
@@ -765,7 +883,7 @@ function deleteMyAd(event, id) {
         const deletedTitle = ads[idx].title;
         ads.splice(idx, 1);
         localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
-        
+
         renderProfileView();
         renderSidebarCounts();
         renderListings();
@@ -805,7 +923,7 @@ function renderSidebarCounts() {
     // Categories count
     const totalSupercars = ads.filter(a => a.type === "supercar").length;
     const totalSuperbikes = ads.filter(a => a.type === "superbike").length;
-    
+
     const countSupercars = document.getElementById("count-supercars");
     const countSuperbikes = document.getElementById("count-superbikes");
     if (countSupercars) countSupercars.innerText = totalSupercars;
@@ -836,7 +954,7 @@ function filterBySidebar(key, value) {
         const selectLoc = document.getElementById("filter-location");
         if (selectLoc) selectLoc.value = value;
     }
-    
+
     // Ensure active view is home
     const homeLayout = document.getElementById("home-layout-section");
     const postAdSection = document.getElementById("post-ad-section");
@@ -921,26 +1039,26 @@ function renderListings() {
     if (!listContainer) return;
 
     listContainer.innerHTML = "";
-    
+
     // Apply Filtering
     let filtered = ads.filter(ad => {
         // Type filter
         if (currentFilters.type !== "all" && ad.type !== currentFilters.type) return false;
-        
+
         // Make filter
         if (currentFilters.make !== "all" && ad.make.toLowerCase() !== currentFilters.make.toLowerCase()) return false;
-        
+
         // Location filter
         if (currentFilters.location !== "all" && ad.location.toLowerCase() !== currentFilters.location.toLowerCase()) return false;
-        
+
         // Price filters
         if (currentFilters.priceMin && ad.price < parseInt(currentFilters.priceMin)) return false;
         if (currentFilters.priceMax && ad.price > parseInt(currentFilters.priceMax)) return false;
-        
+
         // Year filters
         if (currentFilters.yearMin && ad.year < parseInt(currentFilters.yearMin)) return false;
         if (currentFilters.yearMax && ad.year > parseInt(currentFilters.yearMax)) return false;
-        
+
         // Text keyword search
         if (currentFilters.keyword) {
             const query = currentFilters.keyword.toLowerCase();
@@ -950,7 +1068,7 @@ function renderListings() {
             const matchesDesc = ad.description.toLowerCase().includes(query);
             if (!matchesTitle && !matchesModel && !matchesMake && !matchesDesc) return false;
         }
-        
+
         return true;
     });
 
@@ -996,7 +1114,7 @@ function renderListings() {
         const cardEl = document.createElement("div");
         cardEl.className = `listing-card ${ad.featured ? 'featured-card' : ''}`;
         cardEl.setAttribute("data-id", ad.id);
-        
+
         const cardHtml = `
             <div class="card-inner-flex">
                 <div class="card-img-wrapper" onclick="openDetailsModal('${ad.id}')">
@@ -1045,7 +1163,7 @@ function renderFavorites() {
 
     listContainer.innerHTML = "";
     let filtered = ads.filter(ad => favorites.includes(ad.id));
-    
+
     const countSpan = document.getElementById("results-count-number");
     if (countSpan) countSpan.innerText = filtered.length;
 
@@ -1068,7 +1186,7 @@ function renderFavorites() {
         const cardEl = document.createElement("div");
         cardEl.className = `listing-card ${ad.featured ? 'featured-card' : ''}`;
         cardEl.setAttribute("data-id", ad.id);
-        
+
         const cardHtml = `
             <div class="card-inner-flex">
                 <div class="card-img-wrapper" onclick="openDetailsModal('${ad.id}')">
@@ -1113,17 +1231,17 @@ function renderFavorites() {
 // Toggle Favorite status
 function toggleFavorite(event, id) {
     event.stopPropagation();
-    
+
     const index = favorites.indexOf(id);
     if (index > -1) {
         favorites.splice(index, 1);
     } else {
         favorites.push(id);
     }
-    
+
     localStorage.setItem("ceylonsuper_favorites", JSON.stringify(favorites));
     updateFavBadge();
-    
+
     const btn = event.currentTarget;
     if (btn) {
         btn.classList.toggle("active");
@@ -1307,7 +1425,7 @@ let activeChatVehicle = "";
 function openChatSimulator(agentName, vehicleTitle) {
     activeChatAgent = agentName;
     activeChatVehicle = vehicleTitle;
-    
+
     const chatModal = document.getElementById("chat-simulator-modal");
     const chatHeaderName = document.getElementById("chat-agent-name");
     const chatMessages = document.getElementById("chat-messages-container");
@@ -1332,26 +1450,26 @@ function sendMessage() {
     if (!input || !messages || !input.value.trim()) return;
 
     const userText = input.value.trim();
-    
+
     const userMsg = document.createElement("div");
     userMsg.className = "chat-msg sent";
     userMsg.innerText = userText;
     messages.appendChild(userMsg);
-    
+
     input.value = "";
     messages.scrollTop = messages.scrollHeight;
 
     setTimeout(() => {
         const replyMsg = document.createElement("div");
         replyMsg.className = "chat-msg received";
-        
+
         let replyText = `Thanks for your message! Yes, the ${activeChatVehicle} is currently available for viewing. Would you like to schedule an inspection at our secure showroom in Colombo?`;
         if (userText.toLowerCase().includes("price") || userText.toLowerCase().includes("last price") || userText.toLowerCase().includes("negotiable")) {
             replyText = "The price is slightly negotiable for serious buyers after physical inspection. We also offer premium leasing options starting from 14% interest rate.";
         } else if (userText.toLowerCase().includes("permit") || userText.toLowerCase().includes("duty")) {
             replyText = "Yes, all duty documents, custom clearing bills, and registration sheets are clean and available at our office for verification. We support duty-free permit holders as well.";
         }
-        
+
         replyMsg.innerHTML = replyText;
         messages.appendChild(replyMsg);
         messages.scrollTop = messages.scrollHeight;
@@ -1361,9 +1479,9 @@ function sendMessage() {
 // Post Ad Step Controller
 function goToStep(stepNum) {
     if (stepNum < 1 || stepNum > 4) return;
-    
+
     activeStep = stepNum;
-    
+
     document.querySelectorAll(".step-indicator").forEach((ind, index) => {
         ind.classList.remove("active", "completed");
         if (index + 1 < stepNum) {
@@ -1395,7 +1513,7 @@ function validateStep(step) {
         if (!input.value.trim() || input.value === "all") {
             isValid = false;
             input.style.borderColor = "#ef4444";
-            
+
             input.addEventListener("input", function resetBorder() {
                 input.style.borderColor = "";
                 input.removeEventListener("input", resetBorder);
@@ -1427,7 +1545,7 @@ function handleUploadedFiles(files) {
         reader.onload = (e) => {
             const base64 = e.target.result;
             uploadedImages.push(base64);
-            
+
             const idx = uploadedImages.length - 1;
             const thumb = document.createElement("div");
             thumb.className = "preview-thumb-wrapper";
@@ -1446,7 +1564,7 @@ function handleUploadedFiles(files) {
 
 function removeUploadedImage(idx) {
     uploadedImages.splice(idx, 1);
-    
+
     const previewContainer = document.getElementById("upload-previews-container");
     if (!previewContainer) return;
 
@@ -1473,7 +1591,7 @@ function submitNewAd() {
     const year = parseInt(document.getElementById("ad-year").value);
     const condition = document.getElementById("ad-condition").value;
     const dutyStatus = document.getElementById("ad-duty").value;
-    
+
     const mileage = parseInt(document.getElementById("ad-mileage").value) || 0;
     const transmission = document.getElementById("ad-transmission").value;
     const fuel = document.getElementById("ad-fuel").value;
@@ -1481,10 +1599,10 @@ function submitNewAd() {
     const power = document.getElementById("ad-power").value || "";
     const topSpeed = parseInt(document.getElementById("ad-speed").value) || 299;
     const zeroToHundred = document.getElementById("ad-acceleration").value || "";
-    
+
     const price = parseInt(document.getElementById("ad-price").value) || 0;
     const description = document.getElementById("ad-desc").value;
-    
+
     const sellerName = document.getElementById("ad-seller-name").value;
     const sellerPhone = document.getElementById("ad-seller-phone").value;
     const sellerEmail = document.getElementById("ad-seller-email").value;
@@ -1498,8 +1616,8 @@ function submitNewAd() {
     }
 
     if (images.length === 0) {
-        images.push(type === "supercar" ? 
-            "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=800&q=80" : 
+        images.push(type === "supercar" ?
+            "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=800&q=80" :
             "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
         );
     }

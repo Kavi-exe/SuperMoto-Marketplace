@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CeylonSuper | Premium Marketplace for Supercars & Superbikes in Sri Lanka</title>
-    <meta name="description" content="CeylonSuper is the ultimate luxury online marketplace to buy and sell supercars and superbikes in Sri Lanka. Inspired by Riyasewana's quick classifieds system.">
+    <meta name="description"
+        content="CeylonSuper is the ultimate luxury online marketplace to buy and sell supercars and superbikes in Sri Lanka. Inspired by Riyasewana's quick classifieds system.">
     <!-- Google Fonts -->
     <link rel="stylesheet" href="style.css">
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
     <!-- Main Navigation Header -->
@@ -19,8 +22,13 @@
                 <i class="fas fa-tachometer-alt logo-icon"></i>
                 <span class="logo-text">CeylonSuper</span>
             </a>
-            
-            <nav class="main-nav">
+
+            <button class="mobile-nav-toggle" id="mobile-nav-toggle" type="button" aria-controls="main-navigation"
+                aria-expanded="false" title="Open navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <nav class="main-nav" id="main-navigation">
                 <a href="#" class="nav-link active" data-target-view="home">
                     <i class="fas fa-search"></i> Search Ads
                 </a>
@@ -40,11 +48,22 @@
 
     <!-- Hero Section / Slider background (Home View Only) -->
     <div id="home-layout-section">
-        <section class="hero-section" style="background-image: linear-gradient(rgba(10, 11, 13, 0.8), rgba(7, 8, 9, 0.95)), url('https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1500&q=80');">
-            <div class="hero-slider-bg"></div>
+        <section class="hero-section">
+            <div class="hero-animation-bg" aria-hidden="true">
+                <div class="hero-pointer-spotlight"></div>
+                <div class="hero-blueprint-grid"></div>
+                <div class="hero-showroom-lines"></div>
+                <div class="hero-orbit hero-orbit-one"></div>
+                <div class="hero-orbit hero-orbit-two"></div>
+                <i class="fas fa-car-side hero-vehicle hero-supercar"></i>
+                <i class="fas fa-motorcycle hero-vehicle hero-superbike"></i>
+                <i class="fas fa-tachometer-alt hero-vehicle hero-gauge"></i>
+            </div>
             <div class="container hero-content">
                 <h1 class="hero-title">Ceylon's Ultimate <span>Supercar & Superbike</span> Hub</h1>
-                <p class="hero-subtitle">Sri Lanka's premium vehicle marketplace, combining the fast browsing ease of Riyasewana with high-performance vehicles.</p>
+                <p class="hero-subtitle">Sri Lanka's premium vehicle marketplace, combining the fast browsing ease of
+                    Riyasewana with high-performance vehicles.</p>
+                <p class="motivational-quote">Not for everyone. For the 1% who take action.</p>
             </div>
         </section>
 
@@ -62,7 +81,7 @@
                                 <option value="superbike">Superbikes</option>
                             </select>
                         </div>
-                        
+
                         <!-- Make / Brand -->
                         <div class="form-group">
                             <label for="filter-make">Brand / Make</label>
@@ -103,7 +122,8 @@
                         <!-- Keyword Input -->
                         <div class="form-group">
                             <label for="filter-keyword">Search Keyword</label>
-                            <input type="text" id="filter-keyword" class="form-input" placeholder="e.g. V12, GT3, Panigale">
+                            <input type="text" id="filter-keyword" class="form-input"
+                                placeholder="e.g. V12, GT3, Panigale">
                         </div>
 
                         <!-- Price Range -->
@@ -119,8 +139,10 @@
                         <div class="form-group">
                             <label>Model Year</label>
                             <div class="range-inputs">
-                                <input type="number" id="filter-year-min" class="form-input" placeholder="Min Year" min="2000" max="2027">
-                                <input type="number" id="filter-year-max" class="form-input" placeholder="Max Year" min="2000" max="2027">
+                                <input type="number" id="filter-year-min" class="form-input" placeholder="Min Year"
+                                    min="2000" max="2027">
+                                <input type="number" id="filter-year-max" class="form-input" placeholder="Max Year"
+                                    min="2000" max="2027">
                             </div>
                         </div>
                     </div>
@@ -162,13 +184,15 @@
                     <ul class="widget-list">
                         <li class="widget-list-item">
                             <a href="#" onclick="filterBySidebar('type', 'supercar')">
-                                <span><i class="fas fa-car-side" style="color:var(--accent-orange); margin-right:8px"></i> Supercars</span>
+                                <span><i class="fas fa-car-side"
+                                        style="color:var(--accent-orange); margin-right:8px"></i> Supercars</span>
                                 <span class="item-count" id="count-supercars">0</span>
                             </a>
                         </li>
                         <li class="widget-list-item">
                             <a href="#" onclick="filterBySidebar('type', 'superbike')">
-                                <span><i class="fas fa-motorcycle" style="color:var(--accent-cyan); margin-right:8px"></i> Superbikes</span>
+                                <span><i class="fas fa-motorcycle"
+                                        style="color:var(--accent-cyan); margin-right:8px"></i> Superbikes</span>
                                 <span class="item-count" id="count-superbikes">0</span>
                             </a>
                         </li>
@@ -222,7 +246,8 @@
                 <div class="sidebar-widget">
                     <h3 class="widget-title">Safety Tips</h3>
                     <p style="font-size:0.78rem; color:var(--text-secondary); line-height:1.4">
-                        CeylonSuper is a verified classifieds platform. Always inspect vehicles at professional showrooms or official dealerships. Beware of unrealistic low prices.
+                        CeylonSuper is a verified classifieds platform. Always inspect vehicles at professional
+                        showrooms or official dealerships. Beware of unrealistic low prices.
                     </p>
                 </div>
             </aside>
@@ -233,7 +258,7 @@
                     <div class="results-count">
                         Found <span id="results-count-number">0</span> Elite Machines
                     </div>
-                    
+
                     <div class="toolbar-controls">
                         <!-- Sort Control -->
                         <div class="sort-select-wrapper">
@@ -246,7 +271,7 @@
                                 <option value="mileage-asc">Mileage: Low to High</option>
                             </select>
                         </div>
-                        
+
                         <!-- View toggles (List/Grid) -->
                         <div class="view-toggles">
                             <button class="view-toggle-btn active" id="view-list-btn" title="List View">
@@ -271,7 +296,8 @@
     <div id="post-ad-section" class="view-section container">
         <div class="section-header">
             <h2 class="section-title">Sell Your Elite Machine</h2>
-            <p class="section-desc">Create a free premium classified ad on CeylonSuper and connect with verified collectors and buyers.</p>
+            <p class="section-desc">Create a free premium classified ad on CeylonSuper and connect with verified
+                collectors and buyers.</p>
         </div>
 
         <div class="form-step-container glass">
@@ -285,7 +311,7 @@
 
             <!-- Form -->
             <form id="post-ad-form" class="form-step-body" onsubmit="return false;">
-                
+
                 <!-- STEP 1: Basic Info -->
                 <div class="form-step-panel active" data-step="1">
                     <div class="form-input-grid">
@@ -298,15 +324,18 @@
                         </div>
                         <div class="form-group">
                             <label for="ad-make">Brand / Make *</label>
-                            <input type="text" id="ad-make" class="form-input" placeholder="e.g. Ferrari, Porsche, Ducati" required>
+                            <input type="text" id="ad-make" class="form-input"
+                                placeholder="e.g. Ferrari, Porsche, Ducati" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-model">Model Name *</label>
-                            <input type="text" id="ad-model" class="form-input" placeholder="e.g. 911 GT3 RS, Panigale V4 S" required>
+                            <input type="text" id="ad-model" class="form-input"
+                                placeholder="e.g. 911 GT3 RS, Panigale V4 S" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-year">Year of Manufacture *</label>
-                            <input type="number" id="ad-year" class="form-input" placeholder="e.g. 2023" min="1990" max="2027" required>
+                            <input type="number" id="ad-year" class="form-input" placeholder="e.g. 2023" min="1990"
+                                max="2027" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-condition">Condition *</label>
@@ -327,7 +356,8 @@
                     </div>
                     <div class="step-navigation-row">
                         <div></div>
-                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i class="fas fa-arrow-right"></i></button>
+                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i
+                                class="fas fa-arrow-right"></i></button>
                     </div>
                 </div>
 
@@ -336,7 +366,8 @@
                     <div class="form-input-grid">
                         <div class="form-group">
                             <label for="ad-mileage">Mileage (km) *</label>
-                            <input type="number" id="ad-mileage" class="form-input" placeholder="e.g. 1500" min="0" required>
+                            <input type="number" id="ad-mileage" class="form-input" placeholder="e.g. 1500" min="0"
+                                required>
                         </div>
                         <div class="form-group">
                             <label for="ad-transmission">Gearbox / Transmission *</label>
@@ -357,7 +388,8 @@
                         </div>
                         <div class="form-group">
                             <label for="ad-engine">Engine Displacement *</label>
-                            <input type="text" id="ad-engine" class="form-input" placeholder="e.g. 4.0L Flat-6, 1103cc V4" required>
+                            <input type="text" id="ad-engine" class="form-input"
+                                placeholder="e.g. 4.0L Flat-6, 1103cc V4" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-power">Horsepower / Power (optional)</label>
@@ -373,8 +405,10 @@
                         </div>
                     </div>
                     <div class="step-navigation-row">
-                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i> Previous</button>
-                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i class="fas fa-arrow-right"></i></button>
+                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i>
+                            Previous</button>
+                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i
+                                class="fas fa-arrow-right"></i></button>
                     </div>
                 </div>
 
@@ -386,7 +420,8 @@
                             <div class="upload-dropzone" id="upload-dropzone">
                                 <i class="fas fa-cloud-upload-alt upload-icon"></i>
                                 <p style="font-weight:600">Drag & Drop images here or click to browse</p>
-                                <p style="font-size:0.75rem; color:var(--text-secondary)">Supports PNG, JPG, JPEG. Max 5 images.</p>
+                                <p style="font-size:0.75rem; color:var(--text-secondary)">Supports PNG, JPG, JPEG. Max 5
+                                    images.</p>
                                 <input type="file" id="ad-files" multiple accept="image/*" style="display:none">
                             </div>
                             <div class="upload-previews" id="upload-previews-container">
@@ -396,24 +431,32 @@
 
                         <!-- Alternate Unsplash URLs for testing -->
                         <div class="form-group form-input-full">
-                            <label for="ad-unsplash-urls">Alternate Web Image URLs (comma separated for multiple)</label>
-                            <input type="text" id="ad-unsplash-urls" class="form-input" placeholder="e.g. https://images.unsplash.com/photo-1583121274602-3e2820c69888, ...">
-                            <span style="font-size:0.75rem; color:var(--text-muted)">Tip: You can use direct web URLs if you do not want to upload local files.</span>
+                            <label for="ad-unsplash-urls">Alternate Web Image URLs (comma separated for
+                                multiple)</label>
+                            <input type="text" id="ad-unsplash-urls" class="form-input"
+                                placeholder="e.g. https://images.unsplash.com/photo-1583121274602-3e2820c69888, ...">
+                            <span style="font-size:0.75rem; color:var(--text-muted)">Tip: You can use direct web URLs if
+                                you do not want to upload local files.</span>
                         </div>
 
                         <div class="form-group">
                             <label for="ad-price">Expected Price (LKR) *</label>
-                            <input type="number" id="ad-price" class="form-input" placeholder="e.g. 150000000" min="10000" required>
+                            <input type="number" id="ad-price" class="form-input" placeholder="e.g. 150000000"
+                                min="10000" required>
                         </div>
 
                         <div class="form-group form-input-full">
                             <label for="ad-desc">Detailed Description *</label>
-                            <textarea id="ad-desc" class="form-input" rows="5" placeholder="Provide full info on optional packages, custom parts, service logs, duty imports, etc." required style="resize:vertical"></textarea>
+                            <textarea id="ad-desc" class="form-input" rows="5"
+                                placeholder="Provide full info on optional packages, custom parts, service logs, duty imports, etc."
+                                required style="resize:vertical"></textarea>
                         </div>
                     </div>
                     <div class="step-navigation-row">
-                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i> Previous</button>
-                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i class="fas fa-arrow-right"></i></button>
+                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i>
+                            Previous</button>
+                        <button type="button" class="btn-step btn-next btn-step-next">Next Step <i
+                                class="fas fa-arrow-right"></i></button>
                     </div>
                 </div>
 
@@ -422,15 +465,18 @@
                     <div class="form-input-grid">
                         <div class="form-group">
                             <label for="ad-seller-name">Seller Name *</label>
-                            <input type="text" id="ad-seller-name" class="form-input" placeholder="e.g. Suresh Perera" required>
+                            <input type="text" id="ad-seller-name" class="form-input" placeholder="e.g. Suresh Perera"
+                                required>
                         </div>
                         <div class="form-group">
                             <label for="ad-seller-phone">Contact Mobile Number *</label>
-                            <input type="text" id="ad-seller-phone" class="form-input" placeholder="e.g. +94 77 123 4567" required>
+                            <input type="text" id="ad-seller-phone" class="form-input"
+                                placeholder="e.g. +94 77 123 4567" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-seller-email">Email Address *</label>
-                            <input type="email" id="ad-seller-email" class="form-input" placeholder="e.g. suresh@domain.lk" required>
+                            <input type="email" id="ad-seller-email" class="form-input"
+                                placeholder="e.g. suresh@domain.lk" required>
                         </div>
                         <div class="form-group">
                             <label for="ad-seller-location">Location / District *</label>
@@ -446,8 +492,10 @@
                         </div>
                     </div>
                     <div class="step-navigation-row">
-                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i> Previous</button>
-                        <button type="button" class="btn-step btn-submit" id="btn-submit-ad"><i class="fas fa-check-circle"></i> Publish Premium Ad</button>
+                        <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i>
+                            Previous</button>
+                        <button type="button" class="btn-step btn-submit" id="btn-submit-ad"><i
+                                class="fas fa-check-circle"></i> Publish Premium Ad</button>
                     </div>
                 </div>
 
@@ -465,7 +513,7 @@
                 </div>
                 <h3 class="profile-name-title" id="profile-card-name">User Name</h3>
                 <div class="profile-role-badge">Elite Collector</div>
-                
+
                 <div class="profile-stats">
                     <div class="profile-stat-box">
                         <div class="profile-stat-num" id="profile-stat-listings">0</div>
@@ -476,8 +524,9 @@
                         <div class="profile-stat-label">Watchlist</div>
                     </div>
                 </div>
-                
-                <p class="profile-bio" id="profile-card-bio">No bio added yet. Tell us about your passion for elite supercars and superbikes.</p>
+
+                <p class="profile-bio" id="profile-card-bio">No bio added yet. Tell us about your passion for elite
+                    supercars and superbikes.</p>
             </aside>
 
             <!-- Right: Detail panel with tabs -->
@@ -495,22 +544,25 @@
                 </div>
 
                 <div class="profile-tab-body">
-                    
+
                     <!-- Tab 1: Edit Profile Form -->
                     <div class="profile-tab-panel active" id="panel-edit-profile">
                         <form id="edit-profile-form" onsubmit="return false;">
                             <div class="form-input-grid">
                                 <div class="form-group">
                                     <label for="prof-name">Full Name *</label>
-                                    <input type="text" id="prof-name" class="form-input" required placeholder="e.g. Suresh Perera">
+                                    <input type="text" id="prof-name" class="form-input" required
+                                        placeholder="e.g. Suresh Perera">
                                 </div>
                                 <div class="form-group">
                                     <label for="prof-phone">Phone Number *</label>
-                                    <input type="text" id="prof-phone" class="form-input" required placeholder="e.g. +94 77 123 4567">
+                                    <input type="text" id="prof-phone" class="form-input" required
+                                        placeholder="e.g. +94 77 123 4567">
                                 </div>
                                 <div class="form-group">
                                     <label for="prof-email">Email Address *</label>
-                                    <input type="email" id="prof-email" class="form-input" required placeholder="e.g. suresh@domain.lk">
+                                    <input type="email" id="prof-email" class="form-input" required
+                                        placeholder="e.g. suresh@domain.lk">
                                 </div>
                                 <div class="form-group">
                                     <label for="prof-location">Primary Location *</label>
@@ -528,28 +580,38 @@
                                     <label>Choose Avatar Preset</label>
                                     <div class="profile-avatar-select" id="avatar-presets-list">
                                         <!-- Preset option circles -->
-                                        <div class="avatar-option active" data-avatar-url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" alt="Avatar 1">
+                                        <div class="avatar-option active"
+                                            data-avatar-url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80">
+                                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+                                                alt="Avatar 1">
                                         </div>
-                                        <div class="avatar-option" data-avatar-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Avatar 2">
+                                        <div class="avatar-option"
+                                            data-avatar-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80">
+                                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+                                                alt="Avatar 2">
                                         </div>
-                                        <div class="avatar-option" data-avatar-url="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" alt="Avatar 3">
+                                        <div class="avatar-option"
+                                            data-avatar-url="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80">
+                                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
+                                                alt="Avatar 3">
                                         </div>
-                                        <div class="avatar-option" data-avatar-url="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80" alt="Avatar 4">
+                                        <div class="avatar-option"
+                                            data-avatar-url="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80">
+                                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+                                                alt="Avatar 4">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-group form-input-full">
                                     <label for="prof-bio">Short Biography</label>
-                                    <textarea id="prof-bio" class="form-input" rows="4" placeholder="Tell other members about your interest in supercars or superbikes..."></textarea>
+                                    <textarea id="prof-bio" class="form-input" rows="4"
+                                        placeholder="Tell other members about your interest in supercars or superbikes..."></textarea>
                                 </div>
                             </div>
                             <div class="step-navigation-row" style="border:none; padding:0">
                                 <div></div>
-                                <button type="button" id="btn-save-profile" class="btn-step btn-next"><i class="fas fa-save"></i> Save Profile Details</button>
+                                <button type="button" id="btn-save-profile" class="btn-step btn-next"><i
+                                        class="fas fa-save"></i> Save Profile Details</button>
                             </div>
                         </form>
                     </div>
@@ -568,7 +630,8 @@
                         <div class="settings-row">
                             <div class="settings-meta">
                                 <div class="settings-label">Light Color Mode</div>
-                                <div class="settings-desc">Change the background to a light slate-white theme for daytime reading.</div>
+                                <div class="settings-desc">Change the background to a light slate-white theme for
+                                    daytime reading.</div>
                             </div>
                             <label class="switch-control">
                                 <input type="checkbox" id="settings-toggle-theme">
@@ -580,14 +643,17 @@
                         <div class="settings-row">
                             <div class="settings-meta">
                                 <div class="settings-label">Color Theme Accent</div>
-                                <div class="settings-desc">Select your preferred highlights and button glow accent.</div>
+                                <div class="settings-desc">Select your preferred highlights and button glow accent.
+                                </div>
                             </div>
                             <div class="accent-picker" id="settings-accent-picker">
-                                <div class="accent-color-dot color-crimson active" data-accent="crimson" title="Racing Crimson Red"></div>
+                                <div class="accent-color-dot color-crimson active" data-accent="crimson"
+                                    title="Racing Crimson Red"></div>
                                 <div class="accent-color-dot color-blue" data-accent="blue" title="Cyber Blue"></div>
                                 <div class="accent-color-dot color-gold" data-accent="gold" title="Hypercar Gold"></div>
                                 <div class="accent-color-dot color-green" data-accent="green" title="Neon Lime"></div>
-                                <div class="accent-color-dot color-orange" data-accent="orange" title="McLaren Orange"></div>
+                                <div class="accent-color-dot color-orange" data-accent="orange" title="McLaren Orange">
+                                </div>
                             </div>
                         </div>
 
@@ -596,31 +662,33 @@
                         <div class="settings-row">
                             <div class="settings-meta">
                                 <div class="settings-label">Email Notifications</div>
-                                <div class="settings-desc">Receive email alerts when buyers message your simulated chat.</div>
+                                <div class="settings-desc">Receive email alerts when buyers message your simulated chat.
+                                </div>
                             </div>
-                              <label class="switch-control">
-                                  <input type="checkbox" id="settings-notify-email" checked>
-                                  <span class="switch-slider"></span>
-                              </label>
-                          </div>
-  
-                          <!-- Privacy -->
-                          <div class="settings-row">
-                              <div class="settings-meta">
-                                  <div class="settings-label">Public Inventory</div>
-                                  <div class="settings-desc">Allow other users to view your posted listings on your profile card.</div>
-                              </div>
-                              <label class="switch-control">
-                                  <input type="checkbox" id="settings-public-profile" checked>
-                                  <span class="switch-slider"></span>
-                              </label>
-                          </div>
-                      </div>
-  
-                  </div>
-              </main>
-          </div>
-      </div>
+                            <label class="switch-control">
+                                <input type="checkbox" id="settings-notify-email" checked>
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Privacy -->
+                        <div class="settings-row">
+                            <div class="settings-meta">
+                                <div class="settings-label">Public Inventory</div>
+                                <div class="settings-desc">Allow other users to view your posted listings on your
+                                    profile card.</div>
+                            </div>
+                            <label class="switch-control">
+                                <input type="checkbox" id="settings-public-profile" checked>
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
 
     <!-- Details View Overlay Modal -->
     <div id="details-modal-container" class="view-overlay-container">
@@ -660,11 +728,13 @@
     <footer class="main-footer">
         <div class="container footer-grid">
             <div class="footer-widget-desc">
-                <a href="#" class="logo-link" onclick="switchView('home')" style="margin-bottom: 20px; display:inline-flex">
+                <a href="#" class="logo-link" onclick="switchView('home')"
+                    style="margin-bottom: 20px; display:inline-flex">
                     <i class="fas fa-tachometer-alt logo-icon"></i>
                     <span class="logo-text">CeylonSuper</span>
                 </a>
-                <p>Ceylon's elite classifieds marketplace for high-performance supercars and superbikes. Built for speed, safety, and visual excellence.</p>
+                <p>Ceylon's elite classifieds marketplace for high-performance supercars and superbikes. Built for
+                    speed, safety, and visual excellence.</p>
                 <div class="footer-socials">
                     <span class="social-icon-btn"><i class="fab fa-facebook-f"></i></span>
                     <span class="social-icon-btn"><i class="fab fa-instagram"></i></span>
@@ -672,24 +742,32 @@
                     <span class="social-icon-btn"><i class="fab fa-youtube"></i></span>
                 </div>
             </div>
-            
+
             <div>
                 <h4 class="footer-column-title">Categories</h4>
                 <ul class="footer-links">
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'supercar')">Supercars</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'superbike')">Superbikes</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'hypercars')">Hypercars Edition</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'track')">Track Specifications</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'supercar')">Supercars</a>
+                    </li>
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('type', 'superbike')">Superbikes</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'hypercars')">Hypercars
+                            Edition</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'track')">Track
+                            Specifications</a></li>
                 </ul>
             </div>
 
             <div>
                 <h4 class="footer-column-title">Locations</h4>
                 <ul class="footer-links">
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Colombo')">Colombo District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Gampaha')">Gampaha District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Kandy')">Kandy District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Galle')">Galle District</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Colombo')">Colombo
+                            District</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Gampaha')">Gampaha
+                            District</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Kandy')">Kandy
+                            District</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Galle')">Galle
+                            District</a></li>
                 </ul>
             </div>
 
@@ -703,9 +781,10 @@
                 </ul>
             </div>
         </div>
-        
+
         <div class="container footer-bottom">
-            <div>&copy; 2026 CeylonSuper. Designed under inspiration of Riyasewana Classifieds. All rights reserved.</div>
+            <div>&copy; 2026 CeylonSuper. Designed under inspiration of Riyasewana Classifieds. All rights reserved.
+            </div>
             <div class="footer-bottom-links">
                 <a href="#">Verify Documents</a>
                 <a href="#">Showrooms Directory</a>
@@ -717,4 +796,5 @@
     <!-- Main Logic Script -->
     <script src="app.js"></script>
 </body>
+
 </html>
