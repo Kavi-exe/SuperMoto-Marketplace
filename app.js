@@ -288,13 +288,11 @@ let currentFilters = {
 let viewMode = "list"; // list or grid
 let activeStep = 1;
 let uploadedImages = [];
-let activeCustomSelect = null;
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
     initDatabase();
     bindEvents();
-    initCustomSelects();
     renderSidebarCounts();
     renderListings();
     updateFavBadge();
@@ -454,6 +452,10 @@ function bindEvents() {
             renderListings();
         });
     }
+
+    // Custom Dropdown (Brand / Make)
+    initCustomDropdown();
+
 
     // Search Console Inputs
     const searchForm = document.getElementById("search-console-form");
@@ -1665,6 +1667,145 @@ function resetPostForm() {
     if (previewContainer) previewContainer.innerHTML = "";
     activeStep = 1;
     goToStep(1);
+}
+
+function initCustomDropdown() {
+    const dropdown = document.getElementById("filter-make-dropdown");
+    const trigger = document.getElementById("filter-make-trigger");
+    const menu = document.getElementById("filter-make-menu");
+    const hiddenInput = document.getElementById("filter-make");
+
+    if (!dropdown || !trigger || !menu || !hiddenInput) return;
+
+    let isOpen = false;
+
+    // Toggle menu on trigger click
+    trigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        isOpen = !isOpen;
+        if (isOpen) {
+            menu.classList.add("open");
+            trigger.setAttribute("aria-expanded", "true");
+        } else {
+            menu.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+        }
+    });
+
+    // Handle option selection
+    const options = menu.querySelectorAll(".custom-dropdown-option");
+    options.forEach(option => {
+        option.addEventListener("click", (e) => {
+            const value = option.getAttribute("data-value");
+            const text = option.textContent;
+
+            // Update hidden input
+            hiddenInput.value = value;
+
+            // Update trigger text
+            const triggerText = trigger.querySelector(".custom-dropdown-text");
+            triggerText.textContent = text;
+
+            // Update selected state
+            options.forEach(opt => opt.classList.remove("selected"));
+            option.classList.add("selected");
+
+            // Close menu
+            menu.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+            isOpen = false;
+
+            // Trigger filter update
+            updateFiltersFromForm();
+            renderListings();
+        });
+    });
+
+    // Close on outside click
+    document.addEventListener("click", (e) => {
+        if (!dropdown.contains(e.target) && isOpen) {
+            menu.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+            isOpen = false;
+        }
+    });
+
+    // Keyboard navigation
+    trigger.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            isOpen = !isOpen;
+            if (isOpen) {
+                menu.classList.add("open");
+                trigger.setAttribute("aria-expanded", "true");
+                options[0]?.focus();
+            } else {
+                menu.classList.remove("open");
+                trigger.setAttribute("aria-expanded", "false");
+            }
+        } else if (e.key === "Escape" && isOpen) {
+            menu.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+            isOpen = false;
+            trigger.focus();
+        }
+    });
+
+    // Keyboard navigation within menu
+    let currentIndex = -1;
+    menu.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            currentIndex = Math.min(currentIndex + 1, options.length - 1);
+            options[currentIndex]?.focus();
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            currentIndex = Math.max(currentIndex - 1, 0);
+            options[currentIndex]?.focus();
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            options[currentIndex]?.click();
+        } else if (e.key === "Escape") {
+            menu.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+            isOpen = false;
+            trigger.focus();
+        }
+    });
+
+    // Make options focusable
+    options.forEach((option, index) => {
+        option.setAttribute("tabindex", "0");
+        option.addEventListener("focus", () => {
+            currentIndex = index;
+        });
+        option.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                currentIndex = Math.min(currentIndex + 1, options.length - 1);
+                options[currentIndex]?.focus();
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                currentIndex = Math.max(currentIndex - 1, 0);
+                options[currentIndex]?.focus();
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                option.click();
+            }
+        });
+    });
+
+    // Set initial selected state
+    const initialValue = hiddenInput.value;
+    if (initialValue && initialValue !== "all") {
+        const selectedOption = Array.from(options).find(opt => opt.getAttribute("data-value") === initialValue);
+        if (selectedOption) {
+            selectedOption.classList.add("selected");
+            trigger.querySelector(".custom-dropdown-text").textContent = selectedOption.textContent;
+        }
+    } else {
+        options[0]?.classList.add("selected");
+    }
 }
 
 // Global functions attached to window for inline onclick execution
