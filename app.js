@@ -453,8 +453,29 @@ function bindEvents() {
         });
     }
 
-    // Custom Dropdown (Brand / Make)
-    initCustomDropdown();
+    // Custom Dropdowns
+    initCustomDropdown("filter-type", () => {
+        updateFiltersFromForm();
+        renderListings();
+    });
+    initCustomDropdown("filter-make", () => {
+        updateFiltersFromForm();
+        renderListings();
+    });
+    initCustomDropdown("filter-location", () => {
+        updateFiltersFromForm();
+        renderListings();
+    });
+    initCustomDropdown("sort-select", () => {
+        renderListings();
+    });
+    initCustomDropdown("ad-type");
+    initCustomDropdown("ad-condition");
+    initCustomDropdown("ad-duty");
+    initCustomDropdown("ad-transmission");
+    initCustomDropdown("ad-fuel");
+    initCustomDropdown("ad-seller-location");
+    initCustomDropdown("prof-location");
 
 
     // Search Console Inputs
@@ -1669,11 +1690,11 @@ function resetPostForm() {
     goToStep(1);
 }
 
-function initCustomDropdown() {
-    const dropdown = document.getElementById("filter-make-dropdown");
-    const trigger = document.getElementById("filter-make-trigger");
-    const menu = document.getElementById("filter-make-menu");
-    const hiddenInput = document.getElementById("filter-make");
+function initCustomDropdown(dropdownId, onSelectCallback) {
+    const dropdown = document.getElementById(dropdownId + "-dropdown");
+    const trigger = document.getElementById(dropdownId + "-trigger");
+    const menu = document.getElementById(dropdownId + "-menu");
+    const hiddenInput = document.getElementById(dropdownId);
 
     if (!dropdown || !trigger || !menu || !hiddenInput) return;
 
@@ -1715,9 +1736,8 @@ function initCustomDropdown() {
             trigger.setAttribute("aria-expanded", "false");
             isOpen = false;
 
-            // Trigger filter update
-            updateFiltersFromForm();
-            renderListings();
+            // Trigger callback if provided
+            if (onSelectCallback) onSelectCallback();
         });
     });
 
@@ -1797,13 +1817,13 @@ function initCustomDropdown() {
 
     // Set initial selected state
     const initialValue = hiddenInput.value;
-    if (initialValue && initialValue !== "all") {
+    if (initialValue) {
         const selectedOption = Array.from(options).find(opt => opt.getAttribute("data-value") === initialValue);
         if (selectedOption) {
             selectedOption.classList.add("selected");
             trigger.querySelector(".custom-dropdown-text").textContent = selectedOption.textContent;
         }
-    } else {
+    } else if (options.length > 0) {
         options[0]?.classList.add("selected");
     }
 }
