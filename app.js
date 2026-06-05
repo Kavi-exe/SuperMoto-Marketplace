@@ -297,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderListings();
     updateFavBadge();
     initHeroBackgroundInteraction();
+    initAuth();
 });
 
 // Database Init
@@ -657,6 +658,61 @@ function bindEvents() {
             localStorage.setItem("ceylonsuper_settings", JSON.stringify(settings));
         });
     }
+
+    // Auth Overlay & Form switching bindings
+    document.querySelectorAll(".auth-tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tab = btn.getAttribute("data-auth-tab");
+            switchAuthTab(tab);
+        });
+    });
+
+    const loginSwitch = document.getElementById("auth-login-switch");
+    if (loginSwitch) {
+        loginSwitch.addEventListener("click", () => switchAuthTab('signup'));
+    }
+    const signupSwitch = document.getElementById("auth-signup-switch");
+    if (signupSwitch) {
+        signupSwitch.addEventListener("click", () => switchAuthTab('login'));
+    }
+
+    const authCloseBtn = document.getElementById("auth-close-btn");
+    if (authCloseBtn) {
+        authCloseBtn.addEventListener("click", () => {
+            hideAuthOverlay();
+            if (pendingView) {
+                pendingView = null;
+                switchView('home');
+            }
+        });
+    }
+
+    const authOverlay = document.getElementById("auth-overlay");
+    if (authOverlay) {
+        authOverlay.addEventListener("click", (e) => {
+            if (e.target === authOverlay) {
+                hideAuthOverlay();
+                if (pendingView) {
+                    pendingView = null;
+                    switchView('home');
+                }
+            }
+        });
+    }
+
+    const loginFormSubmit = document.getElementById("auth-form-login");
+    if (loginFormSubmit) {
+        loginFormSubmit.addEventListener("submit", handleLogin);
+    }
+    const signupFormSubmit = document.getElementById("auth-form-signup");
+    if (signupFormSubmit) {
+        signupFormSubmit.addEventListener("submit", handleSignup);
+    }
+
+    // Google Sign-In click listener
+    document.querySelectorAll(".btn-auth-google").forEach(btn => {
+        btn.addEventListener("click", openGoogleLogin);
+    });
 }
 
 function setMobileNavOpen(isOpen) {
@@ -751,6 +807,11 @@ function initHeroBackgroundInteraction() {
 
 // Switch SPA views
 function switchView(viewName) {
+    if ((viewName === "post-ad" || viewName === "profile") && !currentUser) {
+        pendingView = viewName;
+        showAuthOverlay('login');
+        return;
+    }
     setMobileNavOpen(false);
 
     // Update active nav links
@@ -1841,3 +1902,320 @@ window.removeUploadedImage = removeUploadedImage;
 window.sendMessage = sendMessage;
 window.deleteMyAd = deleteMyAd;
 window.saveUserProfile = saveUserProfile;
+
+// ==========================================================================
+// AUTH MODULE AND DATABASE INTEGRATION
+// ==========================================================================
+
+const AUTH_API = 'http://localhost:3001';
+let currentUser = null;
+let pendingView = null;
+
+async function initAuth() {
+    try {
+        const res = await fetch(`${AUTH_API}/api/auth/me`, {
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.ok && data.user) {
+            currentUser = data.user;
+            updateNavForUser(currentUser);
+            prefillFromAuth(currentUser);
+        } else {
+            currentUser = null;
+            updateNavForUser(null);
+        }
+    } catch (e) {
+        console.warn('Could not connect to authentication server. Operating in local offline/guest mode.', e);
+        currentUser = null;
+        updateNavForUser(null);
+    }
+}
+
+function showAuthOverlay(tab = 'login') {
+    const overlay = document.getElementById("auth-overlay");
+    if (overlay) {
+        overlay.classList.add("active");
+        overlay.setAttribute("aria-hidden", "false");
+        switchAuthTab(tab);
+    }
+}
+
+function hideAuthOverlay() {
+    const overlay = document.getElementById("auth-overlay");
+    if (overlay) {
+        overlay.classList.remove("active");
+        overlay.setAttribute("aria-hidden", "true");
+        // Clear forms and alert
+        const alert = document.getElementById("auth-alert");
+        if (alert) {
+            alert.style.display = "none";
+            alert.className = "auth-alert";
+        }
+        const loginForm = document.getElementById("auth-form-login");
+        const signupForm = document.getElementById("auth-form-signup");
+        if (loginForm) loginForm.reset();
+        if (signupForm) signupForm.reset();
+    }
+}
+
+function switchAuthTab(tabName) {
+    const loginForm = document.getElementById("auth-form-login");
+    const signupForm = document.getElementById("auth-form-signup");
+    const tabs = document.querySelectorAll(".auth-tab-btn");
+
+    if (tabName === 'login') {
+        if (loginForm) loginForm.style.display = "flex";
+        if (signupForm) signupForm.style.display = "none";
+        tabs.forEach(btn => {
+            if (btn.getAttribute("data-auth-tab") === "login") btn.classList.add("active");
+            else btn.classList.remove("active");
+        });
+    } else {
+        if (loginForm) loginForm.style.display = "none";
+        if (signupForm) signupForm.style.display = "flex";
+        tabs.forEach(btn => {
+            if (btn.getAttribute("data-auth-tab") === "signup") btn.classList.add("active");
+            else btn.classList.remove("active");
+        });
+    }
+}
+
+async function handleLogin(event) {
+    if (event) event.preventDefault();
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+    const submitBtn = document.getElementById("auth-login-submit");
+
+    if (!email || !password) {
+        showAlert("Please enter email and password.", "error");
+        return;
+    }
+
+    try {
+        setLoading(submitBtn, true, "Logging in...");
+        const res = await fetch(`${AUTH_API}/api/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password }),
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+        setLoading(submitBtn, false, '<i class="fas fa-unlock"></i> Login');
+
+        if (data.ok && data.user) {
+            currentUser = data.user;
+            showAlert("Login successful! Redirecting...", "success");
+            setTimeout(() => {
+                updateNavForUser(currentUser);
+                prefillFromAuth(currentUser);
+                hideAuthOverlay();
+                if (pendingView) {
+                    switchView(pendingView);
+                    pendingView = null;
+                }
+            }, 1000);
+        } else {
+            showAlert(data.error || "Invalid credentials.", "error");
+        }
+    } catch (err) {
+        setLoading(submitBtn, false, '<i class="fas fa-unlock"></i> Login');
+        showAlert("Cannot connect to local database server. Make sure it's running on port 3001.", "error");
+    }
+}
+
+async function handleSignup(event) {
+    if (event) event.preventDefault();
+    const name = document.getElementById("signup-name").value;
+    const email = document.getElementById("signup-email").value;
+    const password = document.getElementById("signup-password").value;
+    const submitBtn = document.getElementById("auth-signup-submit");
+
+    if (!name || !email || !password) {
+        showAlert("Please fill in all fields.", "error");
+        return;
+    }
+
+    if (password.length < 8) {
+        showAlert("Password must be at least 8 characters.", "error");
+        return;
+    }
+
+    try {
+        setLoading(submitBtn, true, "Registering...");
+        const res = await fetch(`${AUTH_API}/api/auth/signup`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name, email, password }),
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+        setLoading(submitBtn, false, '<i class="fas fa-user-plus"></i> Create Account');
+
+        if (data.ok && data.user) {
+            currentUser = data.user;
+            showAlert("Account created successfully! Redirecting...", "success");
+            setTimeout(() => {
+                updateNavForUser(currentUser);
+                prefillFromAuth(currentUser);
+                hideAuthOverlay();
+                if (pendingView) {
+                    switchView(pendingView);
+                    pendingView = null;
+                }
+            }, 1000);
+        } else {
+            showAlert(data.error || "Registration failed.", "error");
+        }
+    } catch (err) {
+        setLoading(submitBtn, false, '<i class="fas fa-user-plus"></i> Create Account');
+        showAlert("Cannot connect to local database server. Make sure it's running on port 3001.", "error");
+    }
+}
+
+async function handleLogout() {
+    try {
+        const res = await fetch(`${AUTH_API}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.ok) {
+            currentUser = null;
+            updateNavForUser(null);
+            switchView('home');
+            showAuthOverlay();
+        }
+    } catch (err) {
+        console.error('Logout error:', err);
+        // Fallback local logout
+        currentUser = null;
+        updateNavForUser(null);
+        switchView('home');
+        showAuthOverlay();
+    }
+}
+
+function updateNavForUser(user) {
+    const profileLink = document.getElementById("nav-profile-link");
+    if (!profileLink) return;
+
+    if (user) {
+        const avatarUrl = profile.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80";
+        profileLink.innerHTML = `
+            <span class="nav-user-menu">
+                <span class="nav-user-chip">
+                    <img class="nav-user-avatar" src="${avatarUrl}" alt="${user.name}">
+                    <span class="nav-user-name">${user.name}</span>
+                </span>
+                <button type="button" class="nav-logout-btn" title="Logout" onclick="event.stopPropagation(); window.handleLogout();">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </span>
+        `;
+        profileLink.style.padding = "0";
+        profileLink.style.background = "transparent";
+    } else {
+        profileLink.innerHTML = `
+            <i class="fas fa-user-circle"></i> Profile
+        `;
+        profileLink.style.padding = "";
+        profileLink.style.background = "";
+    }
+}
+
+function prefillFromAuth(user) {
+    if (!user) return;
+    profile.name = user.name;
+    profile.email = user.email;
+    localStorage.setItem("ceylonsuper_profile", JSON.stringify(profile));
+
+    const nameInput = document.getElementById("prof-name");
+    const emailInput = document.getElementById("prof-email");
+    if (nameInput) nameInput.value = user.name;
+    if (emailInput) emailInput.value = user.email;
+}
+
+function showAlert(message, type) {
+    const alert = document.getElementById("auth-alert");
+    if (!alert) return;
+    alert.textContent = message;
+    alert.className = `auth-alert ${type}`;
+    alert.style.display = "block";
+}
+
+function setLoading(btn, isLoading, content) {
+    if (!btn) return;
+    btn.disabled = isLoading;
+    btn.innerHTML = content;
+}
+
+// Attach functions globally to window for layout onclick binds
+window.handleLogout = handleLogout;
+window.handleLogin = handleLogin;
+window.handleSignup = handleSignup;
+window.showAuthOverlay = showAuthOverlay;
+window.hideAuthOverlay = hideAuthOverlay;
+window.switchAuthTab = switchAuthTab;
+
+function openGoogleLogin() {
+    const width = 500;
+    const height = 600;
+    const left = (window.screen.width / 2) - (width / 2);
+    const top = (window.screen.height / 2) - (height / 2);
+    
+    window.open(
+        'google_oauth.html',
+        'GoogleSignInPopup',
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+    );
+}
+
+async function handleGoogleAuthSuccess(name, email) {
+    try {
+        const res = await fetch(`${AUTH_API}/api/auth/google`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name, email }),
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+        if (data.ok && data.user) {
+            currentUser = data.user;
+            showAlert(`Welcome, ${data.user.name}! Redirecting...`, "success");
+            setTimeout(() => {
+                updateNavForUser(currentUser);
+                prefillFromAuth(currentUser);
+                hideAuthOverlay();
+                if (pendingView) {
+                    switchView(pendingView);
+                    pendingView = null;
+                }
+            }, 1000);
+        } else {
+            showAlert(data.error || "Google Sign-In failed.", "error");
+        }
+    } catch (err) {
+        console.error('Google Sign-In Backend error:', err);
+        showAlert("Cannot connect to local database server to complete Google Sign-In.", "error");
+    }
+}
+
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        const { name, email } = event.data;
+        handleGoogleAuthSuccess(name, email);
+    }
+});
+
+window.openGoogleLogin = openGoogleLogin;
+
