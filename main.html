@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CeylonSuperHub | Premium Marketplace for Supercars & Superbikes in Sri Lanka</title>
+    <title>CeylonSuperHub</title>
     <meta name="description"
-        content="CeylonSuperHub is the ultimate luxury online marketplace to buy and sell supercars and superbikes in Sri Lanka. Inspired by Riyasewana's quick classifieds system.">
+        content="CeylonSuperHub is the ultimate luxury online marketplace to buy and sell supercars and superbikes in Sri Lanka.">
     <!-- Google Fonts -->
     <link rel="stylesheet" href="style.css">
     <!-- FontAwesome CDN -->
@@ -29,6 +29,9 @@
             <nav class="main-nav" id="main-navigation">
                 <a href="#" class="nav-link active" data-target-view="home">
                     <i class="fas fa-search"></i> Search Ads
+                </a>
+                <a href="#" class="nav-link" data-target-view="spare-parts">
+                    <i class="fas fa-cogs"></i> Spare Parts
                 </a>
                 <a href="#" class="nav-link fav-btn" data-target-view="favorites">
                     <i class="fas fa-heart"></i> Watchlist
@@ -58,10 +61,13 @@
                 <i class="fas fa-tachometer-alt hero-vehicle hero-gauge"></i>
             </div>
             <div class="container hero-content">
+                <h3 class="hero-title">Welcome to</h3>
                 <h1 class="hero-title">Ceylon's Ultimate <span>Supercar & Superbike</span> Hub</h1>
-                <p class="hero-subtitle">Sri Lanka's premium vehicle marketplace, combining the fast browsing ease of
-                    Riyasewana with high-performance vehicles.</p>
-                <p class="motivational-quote">Not for everyone. For the 1% who take action.</p>
+                <h2>By</h2>
+                <img src="images/Ceylon Force (1).png" height=80px alt="Ceylonforce Logo" class="hero-logo">
+                
+                <br
+                <p class="motivational-quote">Not for everyone. Only For the 1% who take action.</p>
             </div>
         </section>
 
@@ -196,7 +202,7 @@
                     </div>
 
                     <div class="search-action-row">
-                        <!-- Quick Tabs matching Riyasewana top links -->
+                        <!-- Quick Tabs matching top links -->
                         <div class="quick-type-tabs">
                             <button type="button" class="tab-btn active" data-type="all">
                                 <i class="fas fa-border-all"></i> All Ads
@@ -206,6 +212,9 @@
                             </button>
                             <button type="button" class="tab-btn" data-type="superbike">
                                 <i class="fas fa-motorcycle"></i> Superbikes
+                            </button>
+                            <button type="button" class="tab-btn" data-view="spare-parts">
+                                <i class="fas fa-cogs"></i> Spare Parts
                             </button>
                         </div>
 
@@ -242,6 +251,13 @@
                                 <span><i class="fas fa-motorcycle"
                                         style="color:var(--accent-cyan); margin-right:8px"></i> Superbikes</span>
                                 <span class="item-count" id="count-superbikes">0</span>
+                            </a>
+                        </li>
+                        <li class="widget-list-item">
+                            <a href="#" onclick="switchView('spare-parts'); return false;">
+                                <span><i class="fas fa-cogs"
+                                        style="color:var(--accent-gold); margin-right:8px"></i> Spare Parts</span>
+                                <span class="item-count" id="count-spare-parts">0</span>
                             </a>
                         </li>
                     </ul>
@@ -611,6 +627,235 @@
         </div>
     </div>
 
+    <!-- Spare Parts SPA View Section -->
+    <div id="spare-parts-section" class="view-section container">
+        <div class="section-header">
+            <h2 class="section-title">Spare Parts Marketplace</h2>
+            <p class="section-desc">List performance parts, accessories, wheels, body panels, and service items for
+                supercars and superbikes.</p>
+        </div>
+
+        <div class="spare-parts-layout">
+            <div class="form-step-container glass">
+                <form id="spare-parts-form" class="form-step-body" onsubmit="return false;">
+                    <div class="form-input-grid">
+                        <div class="form-group">
+                            <label for="spare-part-name">Part Name *</label>
+                            <input type="text" id="spare-part-name" class="form-input"
+                                placeholder="e.g. Akrapovic exhaust, carbon wing" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-part-category">Part Category *</label>
+                            <div class="custom-dropdown" id="spare-part-category-dropdown">
+                                <button class="custom-dropdown-trigger" id="spare-part-category-trigger" type="button"
+                                    aria-label="Part Category dropdown">
+                                    <span class="custom-dropdown-text">Performance</span>
+                                    <i class="fas fa-chevron-down custom-dropdown-icon"></i>
+                                </button>
+                                <div class="custom-dropdown-menu" id="spare-part-category-menu">
+                                    <div class="custom-dropdown-option" data-value="Performance">Performance</div>
+                                    <div class="custom-dropdown-option" data-value="Body & Aero">Body & Aero</div>
+                                    <div class="custom-dropdown-option" data-value="Wheels & Tires">Wheels & Tires</div>
+                                    <div class="custom-dropdown-option" data-value="Brakes">Brakes</div>
+                                    <div class="custom-dropdown-option" data-value="Interior">Interior</div>
+                                    <div class="custom-dropdown-option" data-value="Service Parts">Service Parts</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="spare-part-category" value="Performance" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-compatible">Compatible Vehicle *</label>
+                            <input type="text" id="spare-compatible" class="form-input"
+                                placeholder="e.g. Porsche 911 992, Ducati V4" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-condition">Condition *</label>
+                            <div class="custom-dropdown" id="spare-condition-dropdown">
+                                <button class="custom-dropdown-trigger" id="spare-condition-trigger" type="button"
+                                    aria-label="Spare Part Condition dropdown">
+                                    <span class="custom-dropdown-text">Brand New</span>
+                                    <i class="fas fa-chevron-down custom-dropdown-icon"></i>
+                                </button>
+                                <div class="custom-dropdown-menu" id="spare-condition-menu">
+                                    <div class="custom-dropdown-option" data-value="Brand New">Brand New</div>
+                                    <div class="custom-dropdown-option" data-value="Used">Used</div>
+                                    <div class="custom-dropdown-option" data-value="Refurbished">Refurbished</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="spare-condition" value="Brand New" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-price">Expected Price (LKR) *</label>
+                            <input type="number" id="spare-price" class="form-input" min="1000"
+                                placeholder="e.g. 450000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-location">Location *</label>
+                            <div class="custom-dropdown" id="spare-location-dropdown">
+                                <button class="custom-dropdown-trigger" id="spare-location-trigger" type="button"
+                                    aria-label="Spare Part Location dropdown">
+                                    <span class="custom-dropdown-text">Colombo</span>
+                                    <i class="fas fa-chevron-down custom-dropdown-icon"></i>
+                                </button>
+                                <div class="custom-dropdown-menu" id="spare-location-menu">
+                                    <div class="custom-dropdown-option" data-value="Colombo">Colombo</div>
+                                    <div class="custom-dropdown-option" data-value="Gampaha">Gampaha</div>
+                                    <div class="custom-dropdown-option" data-value="Kandy">Kandy</div>
+                                    <div class="custom-dropdown-option" data-value="Galle">Galle</div>
+                                    <div class="custom-dropdown-option" data-value="Kurunegala">Kurunegala</div>
+                                    <div class="custom-dropdown-option" data-value="Negombo">Negombo</div>
+                                    <div class="custom-dropdown-option" data-value="Jaffna">Jaffna</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="spare-location" value="Colombo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-seller-name">Seller Name *</label>
+                            <input type="text" id="spare-seller-name" class="form-input"
+                                placeholder="e.g. Suresh Perera" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spare-seller-phone">Contact Mobile Number *</label>
+                            <input type="text" id="spare-seller-phone" class="form-input"
+                                placeholder="e.g. +94 77 123 4567" required>
+                        </div>
+                        <div class="form-group form-input-full">
+                            <label for="spare-description">Details *</label>
+                            <textarea id="spare-description" class="form-input" rows="5"
+                                placeholder="Describe part number, fitment, usage, import status, warranty, and included accessories."
+                                required></textarea>
+                        </div>
+                    </div>
+                    <div class="step-navigation-row">
+                        <button type="button" class="btn-reset" id="btn-reset-spare-form">
+                            <i class="fas fa-redo"></i> Clear
+                        </button>
+                        <button type="submit" class="btn-step btn-submit" id="btn-submit-spare-part">
+                            <i class="fas fa-check-circle"></i> Submit Spare Part
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="spare-parts-panel glass">
+                <div class="settings-section-title">Submitted Spare Parts</div>
+                <div id="spare-parts-list" class="spare-parts-list">
+                    <!-- Spare parts injected dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information SPA View Section -->
+    <div id="info-section" class="view-section container">
+        <div class="section-header">
+            <h2 class="section-title" id="info-section-title">Safety & Terms</h2>
+            <p class="section-desc">Reference pages for buyer safety, marketplace rules, privacy, and support.</p>
+        </div>
+
+        <div class="info-content glass">
+            <div class="info-tabs-header">
+                <button type="button" class="info-tab-btn active" data-info-tab="safe-buying">
+                    <i class="fas fa-shield-alt"></i> Safe Buying Advice
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="terms">
+                    <i class="fas fa-file-contract"></i> Terms & Conditions
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="privacy">
+                    <i class="fas fa-user-lock"></i> Privacy Policy
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="support">
+                    <i class="fas fa-headset"></i> Help & Support
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="verify">
+                    <i class="fas fa-clipboard-check"></i> Verify Documents
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="showrooms">
+                    <i class="fas fa-warehouse"></i> Showrooms Directory
+                </button>
+                <button type="button" class="info-tab-btn" data-info-tab="leasing">
+                    <i class="fas fa-handshake"></i> Leasing Partners
+                </button>
+            </div>
+
+            <div class="info-tab-body">
+                <section class="info-tab-panel active" id="info-panel-safe-buying">
+                    <h3>Safe Buying Advice</h3>
+                    <p>Inspect every vehicle or spare part in person before payment. Match chassis numbers, import
+                        documents, service records, and ownership details with the seller.</p>
+                    <ul>
+                        <li>Meet at a showroom, workshop, bank, or another public verified location.</li>
+                        <li>Use an independent mechanic for pre-purchase inspection.</li>
+                        <li>Avoid advance transfers before you verify the item and seller identity.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-terms">
+                    <h3>Terms & Conditions</h3>
+                    <p>CeylonSuperHub is a classifieds platform. Sellers are responsible for accurate listing details,
+                        pricing, document status, and availability.</p>
+                    <ul>
+                        <li>Do not post misleading prices, copied listings, or unavailable vehicles.</li>
+                        <li>Buyers and sellers must complete their own legal and financial checks.</li>
+                        <li>Listings may be removed if they look fraudulent, unsafe, or incomplete.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-privacy">
+                    <h3>Privacy Policy</h3>
+                    <p>Profile details, listing details, and contact information are stored locally in this demo
+                        marketplace experience and shown only where needed for browsing and contact.</p>
+                    <ul>
+                        <li>Only add contact details you are comfortable sharing with buyers.</li>
+                        <li>Uploaded profile photos are saved in browser storage for this local site.</li>
+                        <li>Clear browser storage if you want to remove locally saved demo data.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-support">
+                    <h3>Help & Support</h3>
+                    <p>Use this area for marketplace assistance, listing edits, buyer reports, and seller verification
+                        guidance.</p>
+                    <ul>
+                        <li>For listing changes, update your profile or repost the correct details.</li>
+                        <li>Report suspicious prices, duplicate ads, or document mismatches.</li>
+                        <li>Add support phone, WhatsApp, and email details here when ready.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-verify">
+                    <h3>Verify Documents</h3>
+                    <p>Use this checklist before committing to a high-value vehicle or spare part purchase.</p>
+                    <ul>
+                        <li>Check registration book, customs duty status, revenue license, and insurance.</li>
+                        <li>Match seller identity with ownership or authorized sale documents.</li>
+                        <li>For imported parts, ask for invoice, part number, and fitment proof.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-showrooms">
+                    <h3>Showrooms Directory</h3>
+                    <p>Add partner showrooms, inspection garages, and performance workshops here.</p>
+                    <ul>
+                        <li>Colombo performance dealers and vehicle inspection partners.</li>
+                        <li>Kandy, Galle, and Kurunegala trusted workshop contacts.</li>
+                        <li>Specialist superbike service providers and parts importers.</li>
+                    </ul>
+                </section>
+
+                <section class="info-tab-panel" id="info-panel-leasing">
+                    <h3>Leasing Partners</h3>
+                    <p>Use this page for banks, finance partners, insurance contacts, and payment guidance.</p>
+                    <ul>
+                        <li>Vehicle leasing partners for premium and collector vehicles.</li>
+                        <li>Insurance contacts for supercars, superbikes, and rare spare parts.</li>
+                        <li>Document requirements for finance approval and ownership transfer.</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <!-- User Profile SPA Section -->
     <div id="profile-section" class="view-section container">
         <div class="profile-grid">
@@ -693,29 +938,20 @@
                                     <input type="hidden" id="prof-location" value="Colombo" required>
                                 </div>
                                 <div class="form-group form-input-full">
-                                    <label>Choose Avatar Preset</label>
-                                    <div class="profile-avatar-select" id="avatar-presets-list">
-                                        <!-- Preset option circles -->
-                                        <div class="avatar-option active"
-                                            data-avatar-url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
-                                                alt="Avatar 1">
+                                    <label for="profile-photo-file">Profile Photo</label>
+                                    <div class="profile-photo-uploader" id="profile-photo-uploader">
+                                        <div class="profile-photo-preview" id="profile-photo-preview">
+                                            <i class="fas fa-user-circle"></i>
                                         </div>
-                                        <div class="avatar-option"
-                                            data-avatar-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
-                                                alt="Avatar 2">
+                                        <div class="profile-photo-copy">
+                                            <strong>Upload your own photo</strong>
+                                            <span>Choose a JPG, PNG, or WebP image for your public profile.</span>
+                                            <button type="button" class="btn-reset" id="profile-photo-browse">
+                                                <i class="fas fa-image"></i> Choose Photo
+                                            </button>
                                         </div>
-                                        <div class="avatar-option"
-                                            data-avatar-url="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"
-                                                alt="Avatar 3">
-                                        </div>
-                                        <div class="avatar-option"
-                                            data-avatar-url="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80">
-                                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
-                                                alt="Avatar 4">
-                                        </div>
+                                        <input type="file" id="profile-photo-file" accept="image/*"
+                                            style="display:none">
                                     </div>
                                 </div>
                                 <div class="form-group form-input-full">
@@ -755,23 +991,7 @@
                             </label>
                         </div>
 
-                        <!-- Accent Picker -->
-                        <div class="settings-row">
-                            <div class="settings-meta">
-                                <div class="settings-label">Color Theme Accent</div>
-                                <div class="settings-desc">Select your preferred highlights and button glow accent.
-                                </div>
-                            </div>
-                            <div class="accent-picker" id="settings-accent-picker">
-                                <div class="accent-color-dot color-crimson active" data-accent="crimson"
-                                    title="Racing Crimson Red"></div>
-                                <div class="accent-color-dot color-blue" data-accent="blue" title="Cyber Blue"></div>
-                                <div class="accent-color-dot color-gold" data-accent="gold" title="Hypercar Gold"></div>
-                                <div class="accent-color-dot color-green" data-accent="green" title="Neon Lime"></div>
-                                <div class="accent-color-dot color-orange" data-accent="orange" title="McLaren Orange">
-                                </div>
-                            </div>
-                        </div>
+
 
                         <!-- Notifications -->
                         <div class="settings-section-title">Account Preferences</div>
@@ -844,7 +1064,7 @@
     <footer class="main-footer">
         <div class="container footer-grid">
             <div class="footer-widget-desc">
-                <a href="#" class="logo-link" onclick="switchView('home')"
+                <a href="#" class="logo-link" onclick="switchView('home'); return false;"
                     style="margin-bottom: 20px; display:inline-flex">
                     <span class="logo-text">CeylonSuperHub</span>
                 </a>
@@ -861,27 +1081,32 @@
             <div>
                 <h4 class="footer-column-title">Categories</h4>
                 <ul class="footer-links">
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'supercar')">Supercars</a>
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('type', 'supercar'); return false;">Supercars</a>
                     </li>
                     <li class="footer-link-item"><a href="#"
-                            onclick="filterBySidebar('type', 'superbike')">Superbikes</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'hypercars')">Hypercars
-                            Edition</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('type', 'track')">Track
-                            Specifications</a></li>
+                            onclick="filterBySidebar('type', 'superbike'); return false;">Superbikes</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="switchView('spare-parts'); return false;">Spare
+                            Parts</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="switchView('post-ad'); return false;">Post Your
+                            Vehicle</a></li>
                 </ul>
             </div>
 
             <div>
                 <h4 class="footer-column-title">Locations</h4>
                 <ul class="footer-links">
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Colombo')">Colombo
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('location', 'Colombo'); return false;">Colombo
                             District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Gampaha')">Gampaha
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('location', 'Gampaha'); return false;">Gampaha
                             District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Kandy')">Kandy
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('location', 'Kandy'); return false;">Kandy
                             District</a></li>
-                    <li class="footer-link-item"><a href="#" onclick="filterBySidebar('location', 'Galle')">Galle
+                    <li class="footer-link-item"><a href="#"
+                            onclick="filterBySidebar('location', 'Galle'); return false;">Galle
                             District</a></li>
                 </ul>
             </div>
@@ -889,110 +1114,28 @@
             <div>
                 <h4 class="footer-column-title">Safety & Terms</h4>
                 <ul class="footer-links">
-                    <li class="footer-link-item"><a href="#">Safe Buying Advice</a></li>
-                    <li class="footer-link-item"><a href="#">Terms & Conditions</a></li>
-                    <li class="footer-link-item"><a href="#">Privacy Policy</a></li>
-                    <li class="footer-link-item"><a href="#">Help & Support</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="openInfoTab('safe-buying'); return false;">Safe
+                            Buying Advice</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="openInfoTab('terms'); return false;">Terms &
+                            Conditions</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="openInfoTab('privacy'); return false;">Privacy
+                            Policy</a></li>
+                    <li class="footer-link-item"><a href="#" onclick="openInfoTab('support'); return false;">Help &
+                            Support</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="container footer-bottom">
-            <div>&copy; 2026 CeylonSuperHub. Designed under inspiration of Riyasewana Classifieds. All rights reserved.
+            <div>&copy; 2026 CeylonSuperHub by Ceylonforce.
             </div>
             <div class="footer-bottom-links">
-                <a href="#">Verify Documents</a>
-                <a href="#">Showrooms Directory</a>
-                <a href="#">Leasing Partners</a>
+                <a href="#" onclick="openInfoTab('verify'); return false;">Verify Documents</a>
+                <a href="#" onclick="openInfoTab('showrooms'); return false;">Showrooms Directory</a>
+                <a href="#" onclick="openInfoTab('leasing'); return false;">Leasing Partners</a>
             </div>
         </div>
     </footer>
-
-    <!-- Auth Overlay (Login / Signup) -->
-    <div id="auth-overlay" class="auth-overlay-container" aria-hidden="true">
-        <div class="auth-modal">
-            <button class="auth-close-btn" id="auth-close-btn" type="button" title="Close">
-                <i class="fas fa-times"></i>
-            </button>
-
-            <div class="auth-header">
-                <div class="auth-badge">
-                    <i class="fas fa-shield-alt"></i> Ceylon Super Hub Access
-                </div>
-                <h2 class="auth-title">Login to Post Ads & Manage Your Profile</h2>
-                <p class="auth-subtitle">Secure sign-in with local authentication server + SQLite database.</p>
-            </div>
-
-            <div class="auth-tabs">
-                <button type="button" class="auth-tab-btn active" data-auth-tab="login">
-                    <i class="fas fa-right-to-bracket"></i> Login
-                </button>
-                <button type="button" class="auth-tab-btn" data-auth-tab="signup">
-                    <i class="fas fa-user-plus"></i> Sign Up
-                </button>
-            </div>
-
-            <div class="auth-body">
-                <div class="auth-alert" id="auth-alert" style="display:none"></div>
-
-                <!-- Login form -->
-                <form id="auth-form-login" class="auth-form" onsubmit="return false;">
-                    <div class="form-group">
-                        <label for="login-email">Email *</label>
-                        <input type="email" id="login-email" class="form-input" required
-                            placeholder="you@example.com" />
-                    </div>
-                    <div class="form-group">
-                        <label for="login-password">Password *</label>
-                        <input type="password" id="login-password" class="form-input" required
-                            placeholder="Your password" />
-                    </div>
-
-                    <div class="auth-actions">
-                        <button type="button" class="btn-reset" id="auth-login-switch">Need an account?</button>
-                        <button type="submit" class="btn-post" id="auth-login-submit">
-                            <i class="fas fa-unlock"></i> Login
-                        </button>
-                    </div>
-                    <div class="auth-separator"><span>or</span></div>
-                    <button type="button" class="btn-google btn-auth-google">
-                        <i class="fab fa-google"></i> Continue with Google
-                    </button>
-                </form>
-
-                <!-- Signup form -->
-                <form id="auth-form-signup" class="auth-form" style="display:none" onsubmit="return false;">
-                    <div class="form-group">
-                        <label for="signup-name">Full Name *</label>
-                        <input type="text" id="signup-name" class="form-input" required
-                            placeholder="e.g. Suresh Perera" />
-                    </div>
-                    <div class="form-group">
-                        <label for="signup-email">Email *</label>
-                        <input type="email" id="signup-email" class="form-input" required
-                            placeholder="you@example.com" />
-                    </div>
-                    <div class="form-group">
-                        <label for="signup-password">Password *</label>
-                        <input type="password" id="signup-password" class="form-input" required
-                            placeholder="At least 8 characters" />
-                    </div>
-
-                    <div class="auth-actions">
-                        <button type="button" class="btn-reset" id="auth-signup-switch">Already have an
-                            account?</button>
-                        <button type="submit" class="btn-post" id="auth-signup-submit">
-                            <i class="fas fa-user-plus"></i> Create Account
-                        </button>
-                    </div>
-                    <div class="auth-separator"><span>or</span></div>
-                    <button type="button" class="btn-google btn-auth-google">
-                        <i class="fab fa-google"></i> Continue with Google
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <!-- Main Logic Script -->
     <script src="app.js"></script>
