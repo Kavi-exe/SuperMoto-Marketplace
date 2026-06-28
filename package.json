@@ -1,7 +1,7 @@
 {
   "name": "ceylonsuper-marketplace",
   "version": "1.0.0",
-  "description": "CeylonSuper - Premium marketplace for supercars and superbikes, inspired by Riyasewana.",
+  "description": "CeylonSuper - Premium marketplace for supercars and superbikes.",
   "main": "main.html",
   "scripts": {
     "dev": "npx -y browser-sync start --server --files \"*.html, *.css, *.js\" --index main.html"

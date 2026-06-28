@@ -271,6 +271,7 @@ const ACCENT_PRESETS = {
 // App State
 let ads = [];
 let favorites = [];
+let spareParts = [];
 let profile = {};
 let settings = {};
 let currentFilters = {
@@ -288,6 +289,7 @@ let currentFilters = {
 let viewMode = "list"; // list or grid
 let activeStep = 1;
 let uploadedImages = [];
+let profilePhotoDraft = "";
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
@@ -297,7 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderListings();
     updateFavBadge();
     initHeroBackgroundInteraction();
-    initAuth();
 });
 
 // Database Init
@@ -318,6 +319,15 @@ function initDatabase() {
     } else {
         favorites = [];
         localStorage.setItem("ceylonsuper_favorites", JSON.stringify(favorites));
+    }
+
+    // Check spare parts
+    const savedSpareParts = localStorage.getItem("ceylonsuper_spare_parts");
+    if (savedSpareParts) {
+        spareParts = JSON.parse(savedSpareParts);
+    } else {
+        spareParts = [];
+        localStorage.setItem("ceylonsuper_spare_parts", JSON.stringify(spareParts));
     }
 
     // Initialize Profile
@@ -477,6 +487,9 @@ function bindEvents() {
     initCustomDropdown("ad-fuel");
     initCustomDropdown("ad-seller-location");
     initCustomDropdown("prof-location");
+    initCustomDropdown("spare-part-category");
+    initCustomDropdown("spare-condition");
+    initCustomDropdown("spare-location");
 
 
     // Search Console Inputs
@@ -499,9 +512,19 @@ function bindEvents() {
     // Quick Type Tabs
     document.querySelectorAll(".quick-type-tabs .tab-btn").forEach(btn => {
         btn.addEventListener("click", () => {
+            const targetView = btn.getAttribute("data-view");
+            if (targetView) {
+                document.querySelectorAll(".quick-type-tabs .tab-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                switchView(targetView);
+                return;
+            }
+
+            const type = btn.getAttribute("data-type");
+            if (!type) return;
             document.querySelectorAll(".quick-type-tabs .tab-btn").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            currentFilters.type = btn.getAttribute("data-type");
+            currentFilters.type = type;
             renderListings();
         });
     });
@@ -559,6 +582,19 @@ function bindEvents() {
         });
     }
 
+    // Spare Parts Form
+    const sparePartsForm = document.getElementById("spare-parts-form");
+    const sparePartsReset = document.getElementById("btn-reset-spare-form");
+    if (sparePartsForm) {
+        sparePartsForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            submitSparePart();
+        });
+    }
+    if (sparePartsReset) {
+        sparePartsReset.addEventListener("click", resetSparePartsForm);
+    }
+
     // Details Modal Close
     const closeBtn = document.getElementById("details-modal-close");
     const modal = document.getElementById("details-modal-container");
@@ -593,13 +629,23 @@ function bindEvents() {
         });
     }
 
-    // Profile presets avatar click
-    document.querySelectorAll("#avatar-presets-list .avatar-option").forEach(opt => {
-        opt.addEventListener("click", () => {
-            document.querySelectorAll("#avatar-presets-list .avatar-option").forEach(o => o.classList.remove("active"));
-            opt.classList.add("active");
+    // Profile photo upload
+    const profilePhotoUploader = document.getElementById("profile-photo-uploader");
+    const profilePhotoInput = document.getElementById("profile-photo-file");
+    const profilePhotoBrowse = document.getElementById("profile-photo-browse");
+    if (profilePhotoUploader && profilePhotoInput) {
+        profilePhotoUploader.addEventListener("click", () => profilePhotoInput.click());
+        if (profilePhotoBrowse) {
+            profilePhotoBrowse.addEventListener("click", (event) => {
+                event.stopPropagation();
+                profilePhotoInput.click();
+            });
+        }
+        profilePhotoInput.addEventListener("change", () => {
+            const file = profilePhotoInput.files && profilePhotoInput.files[0];
+            if (file) handleProfilePhotoFile(file);
         });
-    });
+    }
 
     // Profile Save Button
     const saveProfileBtn = document.getElementById("btn-save-profile");
@@ -659,59 +705,10 @@ function bindEvents() {
         });
     }
 
-    // Auth Overlay & Form switching bindings
-    document.querySelectorAll(".auth-tab-btn").forEach(btn => {
+    document.querySelectorAll("[data-info-tab]").forEach(btn => {
         btn.addEventListener("click", () => {
-            const tab = btn.getAttribute("data-auth-tab");
-            switchAuthTab(tab);
+            openInfoTab(btn.getAttribute("data-info-tab"));
         });
-    });
-
-    const loginSwitch = document.getElementById("auth-login-switch");
-    if (loginSwitch) {
-        loginSwitch.addEventListener("click", () => switchAuthTab('signup'));
-    }
-    const signupSwitch = document.getElementById("auth-signup-switch");
-    if (signupSwitch) {
-        signupSwitch.addEventListener("click", () => switchAuthTab('login'));
-    }
-
-    const authCloseBtn = document.getElementById("auth-close-btn");
-    if (authCloseBtn) {
-        authCloseBtn.addEventListener("click", () => {
-            hideAuthOverlay();
-            if (pendingView) {
-                pendingView = null;
-                switchView('home');
-            }
-        });
-    }
-
-    const authOverlay = document.getElementById("auth-overlay");
-    if (authOverlay) {
-        authOverlay.addEventListener("click", (e) => {
-            if (e.target === authOverlay) {
-                hideAuthOverlay();
-                if (pendingView) {
-                    pendingView = null;
-                    switchView('home');
-                }
-            }
-        });
-    }
-
-    const loginFormSubmit = document.getElementById("auth-form-login");
-    if (loginFormSubmit) {
-        loginFormSubmit.addEventListener("submit", handleLogin);
-    }
-    const signupFormSubmit = document.getElementById("auth-form-signup");
-    if (signupFormSubmit) {
-        signupFormSubmit.addEventListener("submit", handleSignup);
-    }
-
-    // Google Sign-In click listener
-    document.querySelectorAll(".btn-auth-google").forEach(btn => {
-        btn.addEventListener("click", openGoogleLogin);
     });
 }
 
@@ -807,11 +804,6 @@ function initHeroBackgroundInteraction() {
 
 // Switch SPA views
 function switchView(viewName) {
-    if ((viewName === "post-ad" || viewName === "profile") && !currentUser) {
-        pendingView = viewName;
-        showAuthOverlay('login');
-        return;
-    }
     setMobileNavOpen(false);
 
     // Update active nav links
@@ -826,11 +818,15 @@ function switchView(viewName) {
     // Hide/Show main layout or custom views
     const homeLayout = document.getElementById("home-layout-section");
     const postAdSection = document.getElementById("post-ad-section");
+    const sparePartsSection = document.getElementById("spare-parts-section");
+    const infoSection = document.getElementById("info-section");
     const profileSection = document.getElementById("profile-section");
 
     if (viewName === "home") {
         homeLayout.style.display = "block";
         postAdSection.classList.remove("active");
+        sparePartsSection.classList.remove("active");
+        infoSection.classList.remove("active");
         profileSection.classList.remove("active");
         currentFilters = {
             type: "all",
@@ -853,22 +849,54 @@ function switchView(viewName) {
     } else if (viewName === "post-ad") {
         homeLayout.style.display = "none";
         postAdSection.classList.add("active");
+        sparePartsSection.classList.remove("active");
+        infoSection.classList.remove("active");
         profileSection.classList.remove("active");
         resetPostForm();
         prefillPostAdFormFromProfile();
+    } else if (viewName === "spare-parts") {
+        homeLayout.style.display = "none";
+        postAdSection.classList.remove("active");
+        sparePartsSection.classList.add("active");
+        infoSection.classList.remove("active");
+        profileSection.classList.remove("active");
+        prefillSparePartsFormFromProfile();
+        renderSparePartsList();
     } else if (viewName === "favorites") {
         homeLayout.style.display = "block";
         postAdSection.classList.remove("active");
+        sparePartsSection.classList.remove("active");
+        infoSection.classList.remove("active");
         profileSection.classList.remove("active");
         renderFavorites();
     } else if (viewName === "profile") {
         homeLayout.style.display = "none";
         postAdSection.classList.remove("active");
+        sparePartsSection.classList.remove("active");
+        infoSection.classList.remove("active");
         profileSection.classList.add("active");
         renderProfileView();
+    } else if (viewName === "info") {
+        homeLayout.style.display = "none";
+        postAdSection.classList.remove("active");
+        sparePartsSection.classList.remove("active");
+        infoSection.classList.add("active");
+        profileSection.classList.remove("active");
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function openInfoTab(tabName = "safe-buying") {
+    switchView("info");
+
+    document.querySelectorAll("[data-info-tab]").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-info-tab") === tabName);
+    });
+
+    document.querySelectorAll(".info-tab-panel").forEach(panel => {
+        panel.classList.toggle("active", panel.id === `info-panel-${tabName}`);
+    });
 }
 
 // Prefill ad upload sheet with current user profile
@@ -881,7 +909,111 @@ function prefillPostAdFormFromProfile() {
     if (nameField && profile.name) nameField.value = profile.name;
     if (phoneField && profile.phone) phoneField.value = profile.phone;
     if (emailField && profile.email) emailField.value = profile.email;
-    if (locField && profile.location) locField.value = profile.location;
+    if (locField && profile.location) syncCustomDropdown("ad-seller-location", profile.location);
+}
+
+function prefillSparePartsFormFromProfile() {
+    const nameField = document.getElementById("spare-seller-name");
+    const phoneField = document.getElementById("spare-seller-phone");
+    const locationField = document.getElementById("spare-location");
+
+    if (nameField && profile.name) nameField.value = profile.name;
+    if (phoneField && profile.phone) phoneField.value = profile.phone;
+    if (locationField && profile.location) {
+        syncCustomDropdown("spare-location", profile.location);
+    }
+}
+
+function submitSparePart() {
+    const form = document.getElementById("spare-parts-form");
+    if (!form) return;
+
+    const requiredFields = form.querySelectorAll("[required]");
+    let isValid = true;
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.style.borderColor = "#ef4444";
+            isValid = false;
+            field.addEventListener("input", function resetBorder() {
+                field.style.borderColor = "";
+                field.removeEventListener("input", resetBorder);
+            });
+        }
+    });
+
+    if (!isValid) {
+        alert("Please fill all required spare part details.");
+        return;
+    }
+
+    const sparePart = {
+        id: "spare-" + Date.now(),
+        name: document.getElementById("spare-part-name").value.trim(),
+        category: document.getElementById("spare-part-category").value,
+        compatible: document.getElementById("spare-compatible").value.trim(),
+        condition: document.getElementById("spare-condition").value,
+        price: parseInt(document.getElementById("spare-price").value, 10) || 0,
+        location: document.getElementById("spare-location").value,
+        sellerName: document.getElementById("spare-seller-name").value.trim(),
+        sellerPhone: document.getElementById("spare-seller-phone").value.trim(),
+        description: document.getElementById("spare-description").value.trim(),
+        dateAdded: new Date().toISOString().split("T")[0]
+    };
+
+    spareParts.unshift(sparePart);
+    localStorage.setItem("ceylonsuper_spare_parts", JSON.stringify(spareParts));
+
+    resetSparePartsForm();
+    renderSparePartsList();
+    renderSidebarCounts();
+    alert("Spare part details submitted successfully.");
+}
+
+function resetSparePartsForm() {
+    const form = document.getElementById("spare-parts-form");
+    if (form) form.reset();
+
+    syncCustomDropdown("spare-part-category", "Performance");
+    syncCustomDropdown("spare-condition", "Brand New");
+    syncCustomDropdown("spare-location", profile.location || "Colombo");
+    prefillSparePartsFormFromProfile();
+}
+
+function renderSparePartsList() {
+    const container = document.getElementById("spare-parts-list");
+    if (!container) return;
+
+    if (spareParts.length === 0) {
+        container.innerHTML = `
+            <div class="listings-empty-state">
+                <i class="fas fa-cogs empty-state-icon"></i>
+                <div class="empty-state-title">No Spare Parts Submitted Yet</div>
+                <div class="empty-state-desc">Use the form to add performance parts, accessories, or service items.</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = spareParts.map(part => `
+        <article class="spare-part-card">
+            <div>
+                <div class="spare-part-title">${part.name}</div>
+                <div class="spare-part-meta">
+                    <span><i class="fas fa-tag"></i> ${part.category}</span>
+                    <span><i class="fas fa-car-side"></i> ${part.compatible}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${part.location}</span>
+                </div>
+                <p>${part.description}</p>
+            </div>
+            <div class="spare-part-side">
+                <span class="spare-part-condition">${part.condition}</span>
+                <strong>${formatPriceLKR(part.price)}</strong>
+                <a href="tel:${part.sellerPhone}" class="btn-my-ad-action">
+                    <i class="fas fa-phone"></i> Contact
+                </a>
+            </div>
+        </article>
+    `).join("");
 }
 
 // Render User Profile page parameters
@@ -892,7 +1024,9 @@ function renderProfileView() {
 
     const avatarContainer = document.getElementById("profile-card-avatar-container");
     if (avatarContainer) {
-        avatarContainer.innerHTML = `<img src="${profile.avatar}" alt="${profile.name}">`;
+        avatarContainer.innerHTML = profile.avatar
+            ? `<img src="${profile.avatar}" alt="${profile.name}">`
+            : `<i class="fas fa-user-circle"></i>`;
     }
 
     // Stats calculations
@@ -906,15 +1040,8 @@ function renderProfileView() {
     document.getElementById("prof-email").value = profile.email;
     document.getElementById("prof-location").value = profile.location;
     document.getElementById("prof-bio").value = profile.bio;
-
-    // Set preset avatar circle active
-    document.querySelectorAll("#avatar-presets-list .avatar-option").forEach(opt => {
-        if (opt.getAttribute("data-avatar-url") === profile.avatar) {
-            opt.classList.add("active");
-        } else {
-            opt.classList.remove("active");
-        }
-    });
+    profilePhotoDraft = "";
+    setProfilePhotoPreview(profile.avatar);
 
     // 3. Render Listings posted by user
     renderMyAdsList();
@@ -988,18 +1115,36 @@ function saveUserProfile() {
         return;
     }
 
-    // Get active avatar preset URL
-    let avatar = profile.avatar;
-    const activeAvOption = document.querySelector("#avatar-presets-list .avatar-option.active");
-    if (activeAvOption) {
-        avatar = activeAvOption.getAttribute("data-avatar-url");
-    }
+    const avatar = profilePhotoDraft || profile.avatar || "";
 
     profile = { name, phone, email, location, bio, avatar };
     localStorage.setItem("ceylonsuper_profile", JSON.stringify(profile));
 
     renderProfileView();
     alert("Profile saved successfully!");
+}
+
+function handleProfilePhotoFile(file) {
+    if (!file.type.match("image.*")) {
+        alert("Please choose a valid image file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        profilePhotoDraft = event.target.result;
+        setProfilePhotoPreview(profilePhotoDraft);
+    };
+    reader.readAsDataURL(file);
+}
+
+function setProfilePhotoPreview(src) {
+    const preview = document.getElementById("profile-photo-preview");
+    if (!preview) return;
+
+    preview.innerHTML = src
+        ? `<img src="${src}" alt="Profile photo preview">`
+        : `<i class="fas fa-user-circle"></i>`;
 }
 
 // Sidebar quick counts renderer
@@ -1010,8 +1155,10 @@ function renderSidebarCounts() {
 
     const countSupercars = document.getElementById("count-supercars");
     const countSuperbikes = document.getElementById("count-superbikes");
+    const countSpareParts = document.getElementById("count-spare-parts");
     if (countSupercars) countSupercars.innerText = totalSupercars;
     if (countSuperbikes) countSuperbikes.innerText = totalSuperbikes;
+    if (countSpareParts) countSpareParts.innerText = spareParts.length;
 
     // Location counts
     const locations = ["Colombo", "Gampaha", "Kandy", "Galle", "Kurunegala", "Negombo"];
@@ -1028,6 +1175,7 @@ function filterBySidebar(key, value) {
     resetFilters();
     if (key === "type") {
         currentFilters.type = value;
+        syncCustomDropdown("filter-type", value);
         // Sync tabs
         document.querySelectorAll(".quick-type-tabs .tab-btn").forEach(b => {
             b.classList.remove("active");
@@ -1035,17 +1183,23 @@ function filterBySidebar(key, value) {
         });
     } else if (key === "location") {
         currentFilters.location = value;
-        const selectLoc = document.getElementById("filter-location");
-        if (selectLoc) selectLoc.value = value;
+        syncCustomDropdown("filter-location", value);
     }
 
     // Ensure active view is home
     const homeLayout = document.getElementById("home-layout-section");
     const postAdSection = document.getElementById("post-ad-section");
+    const sparePartsSection = document.getElementById("spare-parts-section");
+    const infoSection = document.getElementById("info-section");
     const profileSection = document.getElementById("profile-section");
     homeLayout.style.display = "block";
     postAdSection.classList.remove("active");
+    sparePartsSection.classList.remove("active");
+    infoSection.classList.remove("active");
     profileSection.classList.remove("active");
+    document.querySelectorAll("[data-target-view]").forEach(link => {
+        link.classList.toggle("active", link.getAttribute("data-target-view") === "home");
+    });
 
     renderListings();
     window.scrollTo({ top: 400, behavior: "smooth" });
@@ -1093,6 +1247,9 @@ function resetFilters() {
     document.getElementById("filter-year-min").value = "";
     document.getElementById("filter-year-max").value = "";
     document.getElementById("filter-keyword").value = "";
+    syncCustomDropdown("filter-type", "all");
+    syncCustomDropdown("filter-make", "all");
+    syncCustomDropdown("filter-location", "all");
 
     // Sync tabs
     document.querySelectorAll(".quick-type-tabs .tab-btn").forEach(b => {
@@ -1751,6 +1908,24 @@ function resetPostForm() {
     goToStep(1);
 }
 
+function syncCustomDropdown(dropdownId, value) {
+    const hiddenInput = document.getElementById(dropdownId);
+    const trigger = document.getElementById(dropdownId + "-trigger");
+    const menu = document.getElementById(dropdownId + "-menu");
+    if (!hiddenInput || !trigger || !menu) return;
+
+    hiddenInput.value = value;
+    const options = menu.querySelectorAll(".custom-dropdown-option");
+    options.forEach(option => option.classList.remove("selected"));
+
+    const selectedOption = Array.from(options).find(option => option.getAttribute("data-value") === value);
+    if (selectedOption) {
+        selectedOption.classList.add("selected");
+        const triggerText = trigger.querySelector(".custom-dropdown-text");
+        if (triggerText) triggerText.textContent = selectedOption.textContent;
+    }
+}
+
 function initCustomDropdown(dropdownId, onSelectCallback) {
     const dropdown = document.getElementById(dropdownId + "-dropdown");
     const trigger = document.getElementById(dropdownId + "-trigger");
@@ -1902,320 +2077,3 @@ window.removeUploadedImage = removeUploadedImage;
 window.sendMessage = sendMessage;
 window.deleteMyAd = deleteMyAd;
 window.saveUserProfile = saveUserProfile;
-
-// ==========================================================================
-// AUTH MODULE AND DATABASE INTEGRATION
-// ==========================================================================
-
-const AUTH_API = 'http://localhost:3001';
-let currentUser = null;
-let pendingView = null;
-
-async function initAuth() {
-    try {
-        const res = await fetch(`${AUTH_API}/api/auth/me`, {
-            credentials: 'include'
-        });
-        const data = await res.json();
-        if (data.ok && data.user) {
-            currentUser = data.user;
-            updateNavForUser(currentUser);
-            prefillFromAuth(currentUser);
-        } else {
-            currentUser = null;
-            updateNavForUser(null);
-        }
-    } catch (e) {
-        console.warn('Could not connect to authentication server. Operating in local offline/guest mode.', e);
-        currentUser = null;
-        updateNavForUser(null);
-    }
-}
-
-function showAuthOverlay(tab = 'login') {
-    const overlay = document.getElementById("auth-overlay");
-    if (overlay) {
-        overlay.classList.add("active");
-        overlay.setAttribute("aria-hidden", "false");
-        switchAuthTab(tab);
-    }
-}
-
-function hideAuthOverlay() {
-    const overlay = document.getElementById("auth-overlay");
-    if (overlay) {
-        overlay.classList.remove("active");
-        overlay.setAttribute("aria-hidden", "true");
-        // Clear forms and alert
-        const alert = document.getElementById("auth-alert");
-        if (alert) {
-            alert.style.display = "none";
-            alert.className = "auth-alert";
-        }
-        const loginForm = document.getElementById("auth-form-login");
-        const signupForm = document.getElementById("auth-form-signup");
-        if (loginForm) loginForm.reset();
-        if (signupForm) signupForm.reset();
-    }
-}
-
-function switchAuthTab(tabName) {
-    const loginForm = document.getElementById("auth-form-login");
-    const signupForm = document.getElementById("auth-form-signup");
-    const tabs = document.querySelectorAll(".auth-tab-btn");
-
-    if (tabName === 'login') {
-        if (loginForm) loginForm.style.display = "flex";
-        if (signupForm) signupForm.style.display = "none";
-        tabs.forEach(btn => {
-            if (btn.getAttribute("data-auth-tab") === "login") btn.classList.add("active");
-            else btn.classList.remove("active");
-        });
-    } else {
-        if (loginForm) loginForm.style.display = "none";
-        if (signupForm) signupForm.style.display = "flex";
-        tabs.forEach(btn => {
-            if (btn.getAttribute("data-auth-tab") === "signup") btn.classList.add("active");
-            else btn.classList.remove("active");
-        });
-    }
-}
-
-async function handleLogin(event) {
-    if (event) event.preventDefault();
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-password").value;
-    const submitBtn = document.getElementById("auth-login-submit");
-
-    if (!email || !password) {
-        showAlert("Please enter email and password.", "error");
-        return;
-    }
-
-    try {
-        setLoading(submitBtn, true, "Logging in...");
-        const res = await fetch(`${AUTH_API}/api/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ email, password }),
-            credentials: 'include'
-        });
-
-        const data = await res.json();
-        setLoading(submitBtn, false, '<i class="fas fa-unlock"></i> Login');
-
-        if (data.ok && data.user) {
-            currentUser = data.user;
-            showAlert("Login successful! Redirecting...", "success");
-            setTimeout(() => {
-                updateNavForUser(currentUser);
-                prefillFromAuth(currentUser);
-                hideAuthOverlay();
-                if (pendingView) {
-                    switchView(pendingView);
-                    pendingView = null;
-                }
-            }, 1000);
-        } else {
-            showAlert(data.error || "Invalid credentials.", "error");
-        }
-    } catch (err) {
-        setLoading(submitBtn, false, '<i class="fas fa-unlock"></i> Login');
-        showAlert("Cannot connect to local database server. Make sure it's running on port 3001.", "error");
-    }
-}
-
-async function handleSignup(event) {
-    if (event) event.preventDefault();
-    const name = document.getElementById("signup-name").value;
-    const email = document.getElementById("signup-email").value;
-    const password = document.getElementById("signup-password").value;
-    const submitBtn = document.getElementById("auth-signup-submit");
-
-    if (!name || !email || !password) {
-        showAlert("Please fill in all fields.", "error");
-        return;
-    }
-
-    if (password.length < 8) {
-        showAlert("Password must be at least 8 characters.", "error");
-        return;
-    }
-
-    try {
-        setLoading(submitBtn, true, "Registering...");
-        const res = await fetch(`${AUTH_API}/api/auth/signup`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ name, email, password }),
-            credentials: 'include'
-        });
-
-        const data = await res.json();
-        setLoading(submitBtn, false, '<i class="fas fa-user-plus"></i> Create Account');
-
-        if (data.ok && data.user) {
-            currentUser = data.user;
-            showAlert("Account created successfully! Redirecting...", "success");
-            setTimeout(() => {
-                updateNavForUser(currentUser);
-                prefillFromAuth(currentUser);
-                hideAuthOverlay();
-                if (pendingView) {
-                    switchView(pendingView);
-                    pendingView = null;
-                }
-            }, 1000);
-        } else {
-            showAlert(data.error || "Registration failed.", "error");
-        }
-    } catch (err) {
-        setLoading(submitBtn, false, '<i class="fas fa-user-plus"></i> Create Account');
-        showAlert("Cannot connect to local database server. Make sure it's running on port 3001.", "error");
-    }
-}
-
-async function handleLogout() {
-    try {
-        const res = await fetch(`${AUTH_API}/api/auth/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
-        const data = await res.json();
-        if (data.ok) {
-            currentUser = null;
-            updateNavForUser(null);
-            switchView('home');
-            showAuthOverlay();
-        }
-    } catch (err) {
-        console.error('Logout error:', err);
-        // Fallback local logout
-        currentUser = null;
-        updateNavForUser(null);
-        switchView('home');
-        showAuthOverlay();
-    }
-}
-
-function updateNavForUser(user) {
-    const profileLink = document.getElementById("nav-profile-link");
-    if (!profileLink) return;
-
-    if (user) {
-        const avatarUrl = profile.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80";
-        profileLink.innerHTML = `
-            <span class="nav-user-menu">
-                <span class="nav-user-chip">
-                    <img class="nav-user-avatar" src="${avatarUrl}" alt="${user.name}">
-                    <span class="nav-user-name">${user.name}</span>
-                </span>
-                <button type="button" class="nav-logout-btn" title="Logout" onclick="event.stopPropagation(); window.handleLogout();">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </span>
-        `;
-        profileLink.style.padding = "0";
-        profileLink.style.background = "transparent";
-    } else {
-        profileLink.innerHTML = `
-            <i class="fas fa-user-circle"></i> Profile
-        `;
-        profileLink.style.padding = "";
-        profileLink.style.background = "";
-    }
-}
-
-function prefillFromAuth(user) {
-    if (!user) return;
-    profile.name = user.name;
-    profile.email = user.email;
-    localStorage.setItem("ceylonsuper_profile", JSON.stringify(profile));
-
-    const nameInput = document.getElementById("prof-name");
-    const emailInput = document.getElementById("prof-email");
-    if (nameInput) nameInput.value = user.name;
-    if (emailInput) emailInput.value = user.email;
-}
-
-function showAlert(message, type) {
-    const alert = document.getElementById("auth-alert");
-    if (!alert) return;
-    alert.textContent = message;
-    alert.className = `auth-alert ${type}`;
-    alert.style.display = "block";
-}
-
-function setLoading(btn, isLoading, content) {
-    if (!btn) return;
-    btn.disabled = isLoading;
-    btn.innerHTML = content;
-}
-
-// Attach functions globally to window for layout onclick binds
-window.handleLogout = handleLogout;
-window.handleLogin = handleLogin;
-window.handleSignup = handleSignup;
-window.showAuthOverlay = showAuthOverlay;
-window.hideAuthOverlay = hideAuthOverlay;
-window.switchAuthTab = switchAuthTab;
-
-function openGoogleLogin() {
-    const width = 500;
-    const height = 600;
-    const left = (window.screen.width / 2) - (width / 2);
-    const top = (window.screen.height / 2) - (height / 2);
-    
-    window.open(
-        'google_oauth.html',
-        'GoogleSignInPopup',
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-    );
-}
-
-async function handleGoogleAuthSuccess(name, email) {
-    try {
-        const res = await fetch(`${AUTH_API}/api/auth/google`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ name, email }),
-            credentials: 'include'
-        });
-
-        const data = await res.json();
-        if (data.ok && data.user) {
-            currentUser = data.user;
-            showAlert(`Welcome, ${data.user.name}! Redirecting...`, "success");
-            setTimeout(() => {
-                updateNavForUser(currentUser);
-                prefillFromAuth(currentUser);
-                hideAuthOverlay();
-                if (pendingView) {
-                    switchView(pendingView);
-                    pendingView = null;
-                }
-            }, 1000);
-        } else {
-            showAlert(data.error || "Google Sign-In failed.", "error");
-        }
-    } catch (err) {
-        console.error('Google Sign-In Backend error:', err);
-        showAlert("Cannot connect to local database server to complete Google Sign-In.", "error");
-    }
-}
-
-window.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-        const { name, email } = event.data;
-        handleGoogleAuthSuccess(name, email);
-    }
-});
-
-window.openGoogleLogin = openGoogleLogin;
-
