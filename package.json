@@ -1,14 +1,12 @@
 {
-  "name": "ceylonsuperhub-marketplace",
+  "name": "ceylonsuper-marketplace",
   "version": "1.0.0",
-<<<<<<< Updated upstream
-  "description": "CeylonSuper - Premium marketplace for supercars and superbikes.",
-=======
-  "description": "CeylonSuperHub - Premium marketplace for supercars and superbikes, inspired by Riyasewana.",
->>>>>>> Stashed changes
+  "description": "CeylonSuperHub - Premium marketplace for supercars and superbikes.",
   "main": "main.html",
   "scripts": {
-    "dev": "npx -y browser-sync start --server --files \"*.html, *.css, *.js\" --index main.html"
+    "dev": "npm run dev --prefix server",
+    "dev:static": "npx -y browser-sync start --server --files \"*.html, *.css, *.js\" --index main.html",
+    "start": "npm run start --prefix server"
   },
   "keywords": [
     "marketplace",

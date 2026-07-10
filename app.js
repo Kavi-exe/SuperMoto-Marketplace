@@ -1,5 +1,263 @@
 // CeylonSuper Marketplace JS Engine
 
+const API_BASE = "";
+
+// ── Clean up only genuinely stale/fake data ────────────────────
+// Remove the hardcoded fake profile if it was never replaced by a real one
+(function clearFakeProfile() {
+    try {
+        const raw = localStorage.getItem("ceylonsuper_profile");
+        if (raw) {
+            const p = JSON.parse(raw);
+            if (p.email === "suresh@domain.lk" || p.name === "Suresh Perera") {
+                localStorage.removeItem("ceylonsuper_profile");
+            }
+        }
+    } catch { /* ignore */ }
+})();
+
+let accessToken = sessionStorage.getItem("ceylon_access_token") || "";
+let currentUser = null;
+let appConfig = {};
+let stripeInstance = null;
+let stripeElements = null;
+let paymentElement = null;
+let pendingPaymentAdId = null;
+let sparePartUploadedImages = [];
+let pendingDeleteCallback = null;
+let pendingRedirectView = null;
+const PROTECTED_VIEWS = ["post-ad", "profile"];
+
+async function apiFetch(path, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    if (!(options.body instanceof FormData)) {
+        headers["Content-Type"] = headers["Content-Type"] || "application/json";
+    }
+    if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+        credentials: "include",
+    });
+
+    let data = null;
+    try {
+        data = await response.json();
+    } catch {
+        data = null;
+    }
+
+    if (response.status === 401 && !options._retried && path !== "/api/auth/refresh" && path !== "/api/auth/login") {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+            return apiFetch(path, { ...options, _retried: true });
+        }
+    }
+
+    return { response, data };
+}
+
+function setAccessToken(token) {
+    accessToken = token || "";
+    if (token) {
+        sessionStorage.setItem("ceylon_access_token", token);
+    } else {
+        sessionStorage.removeItem("ceylon_access_token");
+    }
+}
+
+async function refreshAccessToken() {
+    const { response, data } = await apiFetch("/api/auth/refresh", { method: "POST" });
+    if (response.ok && data?.accessToken) {
+        setAccessToken(data.accessToken);
+        currentUser = data.user || currentUser;
+        updateAuthUI();
+        return true;
+    }
+    setAccessToken("");
+    currentUser = null;
+    updateAuthUI();
+    return false;
+}
+
+async function loadPublicConfig() {
+    try {
+        const { response, data } = await apiFetch("/api/config/public");
+        if (response.ok && data) {
+            appConfig = data;
+            // Server is reachable — hide offline banner
+            const banner = document.getElementById("server-offline-banner");
+            if (banner) banner.style.display = "none";
+        } else {
+            showServerOfflineBanner();
+        }
+    } catch {
+        appConfig = {};
+        showServerOfflineBanner();
+    }
+}
+
+function showServerOfflineBanner() {
+    const banner = document.getElementById("server-offline-banner");
+    if (banner) banner.style.display = "block";
+    // Also disable the login/register forms with a clear message
+    ["login-error", "register-error"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "Server is offline. Start the server first: cd server && npm start";
+    });
+}
+
+async function initAuth() {
+    // If we already detected the server is offline, skip
+    const banner = document.getElementById("server-offline-banner");
+    if (banner && banner.style.display !== "none") return;
+
+    if (accessToken) {
+        try {
+            const { response, data } = await apiFetch("/api/auth/me");
+            if (response.ok && data?.user) {
+                currentUser = data.user;
+                updateAuthUI();
+                return;
+            }
+        } catch {
+            return; // server unreachable — silently skip
+        }
+    }
+    // Only try refresh if we have a token or might have a valid cookie
+    try {
+        await refreshAccessToken();
+    } catch {
+        // server unreachable — ignore
+    }
+}
+
+async function uploadImagesToCloud(filesOrData) {
+    const formData = new FormData();
+
+    for (const item of filesOrData) {
+        if (item instanceof File) {
+            formData.append("images", item);
+        } else if (typeof item === "string" && item.startsWith("data:")) {
+            const blob = await fetch(item).then((r) => r.blob());
+            formData.append("images", blob, "upload.jpg");
+        }
+    }
+
+    if (!formData.has("images")) {
+        return [];
+    }
+
+    const { response, data } = await apiFetch("/api/upload/images", {
+        method: "POST",
+        body: formData,
+        headers: {},
+    });
+
+    if (!response.ok) {
+        throw new Error(data?.error || "Image upload failed");
+    }
+
+    return data.urls || [];
+}
+
+async function fetchAdsFromServer() {
+    try {
+        const { response, data } = await apiFetch("/api/ads");
+        if (response.ok && Array.isArray(data?.ads)) {
+            ads = data.ads;
+            return true;
+        }
+    } catch {
+        /* fallback to local */
+    }
+    return false;
+}
+
+async function fetchSparePartsFromServer() {
+    try {
+        const { response, data } = await apiFetch("/api/spare-parts");
+        if (response.ok && Array.isArray(data?.spareParts)) {
+            spareParts = data.spareParts;
+            return true;
+        }
+    } catch {
+        /* fallback to local */
+    }
+    return false;
+}
+
+function updateAuthUI() {
+    const loginLink = document.getElementById("nav-login-link");
+    const logoutBtn = document.getElementById("nav-logout-btn");
+    const profileLink = document.getElementById("nav-profile-link");
+    const postBtn = document.getElementById("nav-post-ad-btn");
+
+    if (currentUser) {
+        if (loginLink) loginLink.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "inline-flex";
+        if (profileLink) profileLink.style.display = "";
+        if (postBtn) postBtn.style.display = "";
+    } else {
+        if (loginLink) loginLink.style.display = "";
+        if (logoutBtn) logoutBtn.style.display = "none";
+        if (profileLink) profileLink.style.display = "";
+        if (postBtn) postBtn.style.display = "";
+    }
+}
+
+function requireAuthForView(viewName) {
+    if (!PROTECTED_VIEWS.includes(viewName)) return true;
+    if (currentUser) return true;
+    pendingRedirectView = viewName;
+    switchView("login");
+    return false;
+}
+
+function showDeleteConfirmModal(message, onConfirm) {
+    const modal = document.getElementById("delete-modal-container");
+    const msgEl = document.getElementById("delete-modal-message");
+    if (!modal || !msgEl) return;
+
+    msgEl.textContent = message || "Are you sure you want to remove this listing? This action cannot be undone.";
+    pendingDeleteCallback = onConfirm;
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden";
+}
+
+function closeDeleteConfirmModal() {
+    const modal = document.getElementById("delete-modal-container");
+    if (modal) modal.classList.remove("active");
+    pendingDeleteCallback = null;
+    document.body.style.overflow = "";
+}
+
+function parseEngineCapacity(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+}
+
+function validateEngineCapacity(showError = true) {
+    const input = document.getElementById("ad-engine-capacity");
+    const errorEl = document.getElementById("engine-capacity-error");
+    if (!input) return true;
+
+    const capacity = parseEngineCapacity(input.value);
+    const invalid = !capacity || capacity <= 250;
+
+    if (errorEl) {
+        errorEl.style.display = invalid && showError ? "block" : "none";
+    }
+    if (input) {
+        input.style.borderColor = invalid && showError ? "#dc2626" : "";
+    }
+
+    return !invalid;
+}
+
 // Preloaded mock database for supercars and superbikes
 const PRELOADED_ADS = [
     {
@@ -247,9 +505,9 @@ const ACCENT_PRESETS = {
         hover: "#ff4d72"
     },
     blue: {
-        primary: "#00a8ff",
-        glow: "rgba(0, 168, 255, 0.3)",
-        hover: "#33baff"
+        primary: "#1a6fff",
+        glow: "rgba(26, 111, 255, 0.35)",
+        hover: "#4d8fff"
     },
     gold: {
         primary: "#ffb300",
@@ -292,15 +550,18 @@ let uploadedImages = [];
 let profilePhotoDraft = "";
 
 // Initialize App
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    await loadPublicConfig();
     initDatabase();
+    await initAuth();
+    await fetchAdsFromServer();
+    await fetchSparePartsFromServer();
     bindEvents();
     renderSidebarCounts();
     renderListings();
     updateFavBadge();
-    initHeroBackgroundInteraction();
+    initParticleCanvas();
 });
-
 // Database Init
 function initDatabase() {
     // Check if ads already exist in localStorage
@@ -336,12 +597,12 @@ function initDatabase() {
         profile = JSON.parse(savedProfile);
     } else {
         profile = {
-            name: "Suresh Perera",
-            phone: "+94 77 123 4567",
-            email: "suresh@domain.lk",
-            location: "Colombo",
-            bio: "Supercar enthusiast and collector. Passionate about naturally aspirated engines, aerodynamic styling, and Italian engineering.",
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+            name: "",
+            phone: "",
+            email: "",
+            location: "",
+            bio: "",
+            avatar: ""
         };
         localStorage.setItem("ceylonsuper_profile", JSON.stringify(profile));
     }
@@ -350,10 +611,15 @@ function initDatabase() {
     const savedSettings = localStorage.getItem("ceylonsuper_settings");
     if (savedSettings) {
         settings = JSON.parse(savedSettings);
+        // Migrate old default crimson accent to blue
+        if (settings.accent === "crimson") {
+            settings.accent = "blue";
+            localStorage.setItem("ceylonsuper_settings", JSON.stringify(settings));
+        }
     } else {
         settings = {
             theme: "dark",
-            accent: "crimson", // default color suggested: Crimson Red
+            accent: "blue", // default color: Blue
             emailNotifications: true,
             publicProfile: true
         };
@@ -379,8 +645,11 @@ function applyThemeSettings() {
         if (themeToggle) themeToggle.checked = false;
     }
 
+    // Ceylon Force logo swap on theme change
+    setCeylonForceLogoForCurrentTheme();
+
     // Accent Highlighting variables
-    const accentData = ACCENT_PRESETS[settings.accent] || ACCENT_PRESETS.crimson;
+    const accentData = ACCENT_PRESETS[settings.accent] || ACCENT_PRESETS.blue;
     const root = document.documentElement;
     root.style.setProperty("--accent-primary", accentData.primary);
     root.style.setProperty("--accent-primary-glow", accentData.glow);
@@ -411,6 +680,7 @@ function bindEvents() {
         link.addEventListener("click", (e) => {
             e.preventDefault();
             const view = link.getAttribute("data-target-view");
+            if (!requireAuthForView(view)) return;
             switchView(view);
         });
     });
@@ -575,9 +845,9 @@ function bindEvents() {
     // Submit Ad Form
     const submitBtn = document.getElementById("btn-submit-ad");
     if (submitBtn) {
-        submitBtn.addEventListener("click", () => {
+        submitBtn.addEventListener("click", async () => {
             if (validateStep(activeStep)) {
-                submitNewAd();
+                await submitNewAd();
             }
         });
     }
@@ -710,6 +980,142 @@ function bindEvents() {
             openInfoTab(btn.getAttribute("data-info-tab"));
         });
     });
+
+    // Login / Register tab switcher
+    document.getElementById("tab-signin")?.addEventListener("click", () => switchLoginTab("signin"));
+    document.getElementById("tab-register")?.addEventListener("click", () => switchLoginTab("register"));
+
+    // Login form submit
+    document.getElementById("login-form")?.addEventListener("submit", (e) => { e.preventDefault(); handleLogin(); });
+
+    // Register form submit
+    document.getElementById("register-form")?.addEventListener("submit", (e) => { e.preventDefault(); handleRegister(); });
+
+    // OTP verification form submit
+    document.getElementById("register-verify-form")?.addEventListener("submit", (e) => { e.preventDefault(); handleVerifyRegistration(); });
+
+    // Ensure OTP form visibility matches tab state
+    const verifyForm = document.getElementById("register-verify-form");
+    if (verifyForm) {
+        verifyForm.addEventListener("transitionend", () => {});
+    }
+
+    // Password toggles
+    document.getElementById("toggle-login-pw")?.addEventListener("click", () => {
+        const inp = document.getElementById("login-password");
+        const ico = document.querySelector("#toggle-login-pw i");
+        inp.type = inp.type === "password" ? "text" : "password";
+        ico?.classList.toggle("fa-eye-slash", inp.type === "password");
+        ico?.classList.toggle("fa-eye", inp.type === "text");
+    });
+    document.getElementById("toggle-register-pw")?.addEventListener("click", () => {
+        const inp = document.getElementById("register-password");
+        const ico = document.querySelector("#toggle-register-pw i");
+        inp.type = inp.type === "password" ? "text" : "password";
+        ico?.classList.toggle("fa-eye-slash", inp.type === "password");
+        ico?.classList.toggle("fa-eye", inp.type === "text");
+    });
+
+    // Logout
+    document.getElementById("nav-logout-btn")?.addEventListener("click", handleLogout);
+
+    // Google OAuth popup
+    const googleBtns = document.querySelectorAll(".login-social-btn[data-provider='google']");
+    googleBtns.forEach(btn => {
+        btn.removeAttribute("disabled");
+        btn.setAttribute("title", "Sign in with Google");
+        btn.addEventListener("click", handleGoogleLogin);
+    });
+
+    // Apple — not yet available, show informative message
+    const appleBtns = document.querySelectorAll(".login-social-btn[data-provider='apple']");
+    appleBtns.forEach(btn => {
+        btn.removeAttribute("disabled");
+        btn.setAttribute("title", "Sign in with Apple");
+        btn.addEventListener("click", () => {
+            showToast("Apple Sign‑In is not available yet. Please use email or Google.", "info");
+        });
+    });
+
+    // Listen for Google OAuth popup callback
+    window.addEventListener("message", (event) => {
+        if (event.data?.type === "GOOGLE_AUTH_SUCCESS") {
+            handleGoogleAuthSuccess(event.data);
+        }
+    });
+
+    // Engine capacity validation
+    const engineCapacityInput = document.getElementById("ad-engine-capacity");
+    if (engineCapacityInput) {
+        engineCapacityInput.addEventListener("blur", () => validateEngineCapacity(true));
+        engineCapacityInput.addEventListener("input", () => {
+            if (parseEngineCapacity(engineCapacityInput.value) > 250) {
+                validateEngineCapacity(false);
+            }
+        });
+    }
+
+    // Spare parts image upload
+    const spareDropzone = document.getElementById("spare-upload-dropzone");
+    const spareFileInput = document.getElementById("spare-part-files");
+    if (spareDropzone && spareFileInput) {
+        spareDropzone.addEventListener("click", () => spareFileInput.click());
+        spareDropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            spareDropzone.style.borderColor = "var(--accent-cyan)";
+        });
+        spareDropzone.addEventListener("dragleave", () => {
+            spareDropzone.style.borderColor = "var(--border-color)";
+        });
+        spareDropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            spareDropzone.style.borderColor = "var(--border-color)";
+            if (e.dataTransfer.files.length) {
+                handleSparePartFiles(e.dataTransfer.files);
+            }
+        });
+        spareFileInput.addEventListener("change", () => {
+            if (spareFileInput.files.length) {
+                handleSparePartFiles(spareFileInput.files);
+            }
+        });
+    }
+
+    // Payment modal
+    const paymentClose = document.getElementById("payment-modal-close");
+    const paymentModal = document.getElementById("payment-modal-container");
+    if (paymentClose && paymentModal) {
+        paymentClose.addEventListener("click", closePaymentModal);
+        paymentModal.addEventListener("click", (e) => {
+            if (e.target === paymentModal) closePaymentModal();
+        });
+    }
+
+    const confirmPaymentBtn = document.getElementById("btn-confirm-payment");
+    if (confirmPaymentBtn) {
+        confirmPaymentBtn.addEventListener("click", confirmStripePayment);
+    }
+
+    // Delete modal
+    const deleteCancel = document.getElementById("delete-modal-cancel");
+    const deleteConfirm = document.getElementById("delete-modal-confirm");
+    const deleteModal = document.getElementById("delete-modal-container");
+    if (deleteCancel) {
+        deleteCancel.addEventListener("click", closeDeleteConfirmModal);
+    }
+    if (deleteConfirm) {
+        deleteConfirm.addEventListener("click", async () => {
+            if (pendingDeleteCallback) {
+                await pendingDeleteCallback();
+            }
+            closeDeleteConfirmModal();
+        });
+    }
+    if (deleteModal) {
+        deleteModal.addEventListener("click", (e) => {
+            if (e.target === deleteModal) closeDeleteConfirmModal();
+        });
+    }
 }
 
 function setMobileNavOpen(isOpen) {
@@ -727,79 +1133,112 @@ function setMobileNavOpen(isOpen) {
     }
 }
 
-function initHeroBackgroundInteraction() {
-    const hero = document.querySelector(".hero-section");
-    if (!hero) return;
+function initParticleCanvas() {
+    const canvas = document.getElementById("particle-canvas");
+    if (!canvas) return;
 
-    let animationFrame = 0;
-    let interactionTimer = 0;
+    const ctx = canvas.getContext("2d");
+    let particles = [];
+    let animationId = null;
+    let mouseX = 0;
+    let mouseY = 0;
 
-    const px = value => `${value.toFixed(2)}px`;
+    const PARTICLE_COUNT = 120;
+    const CONNECTION_DIST = 150;
 
-    const applyHeroPointer = (xPercent, yPercent) => {
-        const clampedX = Math.max(0, Math.min(100, xPercent));
-        const clampedY = Math.max(0, Math.min(100, yPercent));
-        const xDelta = (clampedX - 50) / 50;
-        const yDelta = (clampedY - 50) / 50;
-
-        hero.style.setProperty("--hero-pointer-x", `${clampedX.toFixed(1)}%`);
-        hero.style.setProperty("--hero-pointer-y", `${clampedY.toFixed(1)}%`);
-        hero.style.setProperty("--hero-parallax-soft-x", px(xDelta * -8));
-        hero.style.setProperty("--hero-parallax-soft-y", px(yDelta * -6));
-        hero.style.setProperty("--hero-parallax-grid-x", px(xDelta * 10));
-        hero.style.setProperty("--hero-parallax-grid-y", px(yDelta * 8));
-        hero.style.setProperty("--hero-parallax-floor-x", px(xDelta * -5));
-        hero.style.setProperty("--hero-parallax-floor-y", px(yDelta * -4));
-        hero.style.setProperty("--hero-parallax-near-x", px(xDelta * 16));
-        hero.style.setProperty("--hero-parallax-near-y", px(yDelta * 10));
-        hero.style.setProperty("--hero-parallax-far-x", px(xDelta * -14));
-        hero.style.setProperty("--hero-parallax-far-y", px(yDelta * 12));
-        hero.style.setProperty("--hero-parallax-gauge-x", px(xDelta * 8));
-        hero.style.setProperty("--hero-parallax-gauge-y", px(yDelta * -8));
-    };
-
-    const queuePointerUpdate = (clientX, clientY) => {
+    function resize() {
+        const hero = canvas.parentElement;
         const rect = hero.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = rect.width + "px";
+        canvas.style.height = rect.height + "px";
+        ctx.scale(dpr, dpr);
+    }
 
-        const xPercent = ((clientX - rect.left) / rect.width) * 100;
-        const yPercent = ((clientY - rect.top) / rect.height) * 100;
+    function createParticles() {
+        particles = [];
+        const w = canvas.width / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 0.5) * 0.6,
+                r: Math.random() * 2.5 + 0.8,
+                alpha: Math.random() * 0.5 + 0.2,
+                hue: Math.random() > 0.5 ? 350 : 190, // red-ish or cyan-ish
+            });
+        }
+    }
 
-        if (animationFrame) cancelAnimationFrame(animationFrame);
-        animationFrame = requestAnimationFrame(() => {
-            applyHeroPointer(xPercent, yPercent);
-            animationFrame = 0;
-        });
-    };
+    function draw() {
+        const w = canvas.width / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
 
-    const markInteracting = () => {
-        hero.classList.add("is-interacting");
-        window.clearTimeout(interactionTimer);
-        interactionTimer = window.setTimeout(() => {
-            hero.classList.remove("is-interacting");
-        }, 650);
-    };
+        ctx.clearRect(0, 0, w, h);
 
-    hero.addEventListener("pointermove", event => {
-        queuePointerUpdate(event.clientX, event.clientY);
-    }, { passive: true });
+        // Update and draw particles
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
 
-    hero.addEventListener("pointerdown", event => {
-        queuePointerUpdate(event.clientX, event.clientY);
-        markInteracting();
-    }, { passive: true });
+            // Movement
+            p.x += p.vx;
+            p.y += p.vy;
 
-    hero.addEventListener("touchmove", event => {
-        const touch = event.touches[0];
-        if (!touch) return;
-        queuePointerUpdate(touch.clientX, touch.clientY);
-        markInteracting();
-    }, { passive: true });
+            // Wrap around
+            if (p.x < -10) p.x = w + 10;
+            if (p.x > w + 10) p.x = -10;
+            if (p.y < -10) p.y = h + 10;
+            if (p.y > h + 10) p.y = -10;
 
-    hero.addEventListener("pointerleave", () => {
-        applyHeroPointer(50, 48);
-        hero.classList.remove("is-interacting");
-    }, { passive: true });
+            // Draw particle
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${p.alpha})`;
+            ctx.fill();
+
+            // Glow
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${p.alpha * 0.12})`;
+            ctx.fill();
+        }
+
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const a = particles[i];
+                const b = particles[j];
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < CONNECTION_DIST) {
+                    const alpha = (1 - dist / CONNECTION_DIST) * 0.15;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.lineWidth = 0.6;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        animationId = requestAnimationFrame(draw);
+    }
+
+    resize();
+    createParticles();
+    draw();
+
+    window.addEventListener("resize", () => {
+        resize();
+        createParticles();
+    });
 }
 
 // Switch SPA views
@@ -821,13 +1260,15 @@ function switchView(viewName) {
     const sparePartsSection = document.getElementById("spare-parts-section");
     const infoSection = document.getElementById("info-section");
     const profileSection = document.getElementById("profile-section");
+    const loginSection = document.getElementById("login-section");
+    const announcementsSection = document.getElementById("announcements-section");
+
+    [postAdSection, sparePartsSection, infoSection, profileSection, loginSection, announcementsSection].forEach(el => {
+        if (el) el.classList.remove("active");
+    });
 
     if (viewName === "home") {
         homeLayout.style.display = "block";
-        postAdSection.classList.remove("active");
-        sparePartsSection.classList.remove("active");
-        infoSection.classList.remove("active");
-        profileSection.classList.remove("active");
         currentFilters = {
             type: "all",
             make: "all",
@@ -849,39 +1290,33 @@ function switchView(viewName) {
     } else if (viewName === "post-ad") {
         homeLayout.style.display = "none";
         postAdSection.classList.add("active");
-        sparePartsSection.classList.remove("active");
-        infoSection.classList.remove("active");
-        profileSection.classList.remove("active");
         resetPostForm();
         prefillPostAdFormFromProfile();
     } else if (viewName === "spare-parts") {
         homeLayout.style.display = "none";
-        postAdSection.classList.remove("active");
         sparePartsSection.classList.add("active");
-        infoSection.classList.remove("active");
-        profileSection.classList.remove("active");
         prefillSparePartsFormFromProfile();
         renderSparePartsList();
     } else if (viewName === "favorites") {
         homeLayout.style.display = "block";
-        postAdSection.classList.remove("active");
-        sparePartsSection.classList.remove("active");
-        infoSection.classList.remove("active");
-        profileSection.classList.remove("active");
         renderFavorites();
     } else if (viewName === "profile") {
         homeLayout.style.display = "none";
-        postAdSection.classList.remove("active");
-        sparePartsSection.classList.remove("active");
-        infoSection.classList.remove("active");
         profileSection.classList.add("active");
         renderProfileView();
     } else if (viewName === "info") {
         homeLayout.style.display = "none";
-        postAdSection.classList.remove("active");
-        sparePartsSection.classList.remove("active");
         infoSection.classList.add("active");
-        profileSection.classList.remove("active");
+    } else if (viewName === "login") {
+        homeLayout.style.display = "none";
+        if (loginSection) loginSection.classList.add("active");
+        // default to sign-in tab
+        switchLoginTab("signin");
+        const err = document.getElementById("login-error");
+        if (err) err.textContent = "";
+    } else if (viewName === "announcements") {
+        homeLayout.style.display = "none";
+        if (announcementsSection) announcementsSection.classList.add("active");
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -899,6 +1334,383 @@ function openInfoTab(tabName = "safe-buying") {
     });
 }
 
+// Login page tab switcher
+function switchLoginTab(tab) {
+    const signinTab = document.getElementById("tab-signin");
+    const registerTab = document.getElementById("tab-register");
+    const verifyTab = document.getElementById("tab-register-verify");
+
+    const indicator = document.getElementById("login-tab-indicator");
+    const signinForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
+    const verifyForm = document.getElementById("register-verify-form");
+
+    if (tab === "register") {
+        signinTab?.classList.remove("active");
+        registerTab?.classList.add("active");
+        verifyTab?.classList.remove("active");
+        indicator?.classList.add("on-register");
+        signinForm?.classList.remove("active");
+        registerForm?.classList.add("active");
+        verifyForm?.classList.remove("active");
+    } else if (tab === "register-verify") {
+        signinTab?.classList.remove("active");
+        registerTab?.classList.remove("active");
+        verifyTab?.classList.add("active");
+        indicator?.classList.add("on-register");
+        signinForm?.classList.remove("active");
+        registerForm?.classList.remove("active");
+        verifyForm?.classList.add("active");
+    } else {
+        verifyTab?.classList.remove("active");
+        registerTab?.classList.remove("active");
+        signinTab?.classList.add("active");
+        indicator?.classList.remove("on-register");
+        registerForm?.classList.remove("active");
+        verifyForm?.classList.remove("active");
+        signinForm?.classList.add("active");
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById("login-email")?.value.trim();
+    const password = document.getElementById("login-password")?.value;
+    const errorEl = document.getElementById("login-error");
+    if (errorEl) errorEl.textContent = "";
+
+    if (!email || !password) {
+        if (errorEl) errorEl.textContent = "Email and password are required.";
+        return;
+    }
+
+    const btn = document.getElementById("btn-login-submit");
+    if (btn) { btn.disabled = true; const s = btn.querySelector("span"); if (s) s.textContent = "Signing in…"; }
+
+    const { response, data } = await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+    });
+
+    if (btn) { btn.disabled = false; const s = btn.querySelector("span"); if (s) s.textContent = "Sign In"; }
+
+    if (!response.ok) {
+        // If the account exists but isn't verified, let them verify instead of just erroring
+        if (response.status === 403 && data?.error?.toLowerCase().includes('verification')) {
+            // Re-register with same credentials to get a fresh OTP
+            const { response: regRes, data: regData } = await apiFetch("/api/auth/register", {
+                method: "POST",
+                body: JSON.stringify({ name: email.split("@")[0], email, password }),
+            });
+            if (regRes.ok && regData?.verificationRequired) {
+                const tokenInput = document.getElementById("register-verification-token");
+                if (tokenInput) tokenInput.value = regData.verificationToken;
+                const codeInput = document.getElementById("register-otp");
+                if (codeInput) codeInput.value = "";
+                const otpHint = document.getElementById("register-otp-hint");
+                if (otpHint) {
+                    otpHint.style.display = regData.otpCode ? "block" : "none";
+                    if (regData.otpCode) otpHint.textContent = `Your verification code (dev): ${regData.otpCode}`;
+                }
+                switchLoginTab("register-verify");
+                return;
+            }
+        }
+        if (errorEl) errorEl.textContent = data?.error || "Invalid credentials.";
+        return;
+    }
+
+    setAccessToken(data.accessToken);
+    currentUser = data.user;
+    updateAuthUI();
+    const dest = pendingRedirectView || "home";
+    pendingRedirectView = null;
+    switchView(dest);
+}
+
+async function handleRegister() {
+    const name = document.getElementById("register-name")?.value.trim();
+    const email = document.getElementById("register-email")?.value.trim();
+    const password = document.getElementById("register-password")?.value;
+    const errorEl = document.getElementById("register-error");
+    if (errorEl) errorEl.textContent = "";
+
+    if (!name || !email || !password) {
+        if (errorEl) errorEl.textContent = "All fields are required.";
+        return;
+    }
+    if (password.length < 8) {
+        if (errorEl) errorEl.textContent = "Password must be at least 8 characters.";
+        return;
+    }
+
+    const btn = document.getElementById("btn-register-submit");
+    if (btn) { btn.disabled = true; const s = btn.querySelector("span"); if (s) s.textContent = "Creating…"; }
+
+    const { response, data } = await apiFetch("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password }),
+    });
+
+    if (btn) { btn.disabled = false; const s = btn.querySelector("span"); if (s) s.textContent = "Create Account"; }
+
+    if (!response.ok) {
+        if (errorEl) errorEl.textContent = data?.error || "Registration failed.";
+        return;
+    }
+
+    // 2-step verification gate
+    if (data?.verificationRequired) {
+        const vt = data.verificationToken;
+        if (!vt) {
+            if (errorEl) errorEl.textContent = "Verification failed to start.";
+            return;
+        }
+
+        // In dev mode server returns otpCode (TEMP). Prefer not to display in production.
+        const otpCode = data.otpCode;
+
+        const codeInput = document.getElementById("register-otp");
+        if (codeInput) codeInput.value = "";
+
+        const tokenInput = document.getElementById("register-verification-token");
+        if (tokenInput) tokenInput.value = vt;
+
+        const otpHint = document.getElementById("register-otp-hint");
+        if (otpHint) {
+            otpHint.style.display = otpCode ? "block" : "none";
+            if (otpCode) otpHint.textContent = `Your verification code (dev): ${otpCode}`;
+        }
+
+        // Switch UI to OTP verification panel
+        switchLoginTab("register-verify");
+        // Preserve the original redirect destination through the verify step
+        if (!pendingRedirectView || pendingRedirectView === "login") {
+            pendingRedirectView = "home";
+        }
+        return;
+    }
+
+    // Backward compatibility (if server still returns tokens)
+    if (data?.accessToken && data?.user) {
+        setAccessToken(data.accessToken);
+        currentUser = data.user;
+        updateAuthUI();
+        const dest = pendingRedirectView || "home";
+        pendingRedirectView = null;
+        switchView(dest);
+    }
+}
+
+async function handleLogout() {
+    await apiFetch("/api/auth/logout", { method: "POST" });
+    setAccessToken("");
+    currentUser = null;
+    updateAuthUI();
+    switchView("home");
+}
+
+async function handleVerifyRegistration() {
+    const errorEl = document.getElementById("register-verify-error");
+    if (errorEl) errorEl.textContent = "";
+
+    const verificationToken = document.getElementById("register-verification-token")?.value?.trim();
+    const otp = document.getElementById("register-otp")?.value?.trim();
+
+    if (!verificationToken || !otp) {
+        if (errorEl) errorEl.textContent = "Verification token and OTP are required.";
+        return;
+    }
+
+    const btn = document.getElementById("btn-register-verify-submit");
+    if (btn) { btn.disabled = true; const s = btn.querySelector("span"); if (s) s.textContent = "Verifying…"; }
+
+    const { response, data } = await apiFetch("/api/auth/verify-registration", {
+        method: "POST",
+        body: JSON.stringify({ verificationToken, otp }),
+    });
+
+    if (btn) { btn.disabled = false; const s = btn.querySelector("span"); if (s) s.textContent = "Verify & Continue"; }
+
+    if (!response.ok) {
+        if (errorEl) errorEl.textContent = data?.error || "Verification failed.";
+        return;
+    }
+
+    if (data?.accessToken && data?.user) {
+        setAccessToken(data.accessToken);
+        currentUser = data.user;
+        updateAuthUI();
+        const dest = pendingRedirectView || "home";
+        pendingRedirectView = null;
+        switchView(dest);
+        return;
+    }
+
+    if (errorEl) errorEl.textContent = "Unexpected verification response.";
+}
+
+async function handleResendOtp() {
+    const errorEl = document.getElementById("register-verify-error");
+    if (errorEl) errorEl.textContent = "";
+
+    const verificationToken = document.getElementById("register-verification-token")?.value?.trim();
+    if (!verificationToken) {
+        if (errorEl) errorEl.textContent = "Session expired. Please go back and register again.";
+        return;
+    }
+
+    const resendLink = document.getElementById("btn-resend-otp");
+    if (resendLink) { resendLink.style.pointerEvents = "none"; resendLink.textContent = "Sending…"; }
+
+    const { response, data } = await apiFetch("/api/auth/resend-otp", {
+        method: "POST",
+        body: JSON.stringify({ verificationToken }),
+    });
+
+    if (resendLink) { resendLink.style.pointerEvents = ""; resendLink.textContent = "Resend code"; }
+
+    if (!response.ok) {
+        if (errorEl) errorEl.textContent = data?.error || "Failed to resend code.";
+        return;
+    }
+
+    // Update the stored token (fresh JWT) and show new code hint if available
+    if (data.verificationToken) {
+        const tokenInput = document.getElementById("register-verification-token");
+        if (tokenInput) tokenInput.value = data.verificationToken;
+    }
+    const codeInput = document.getElementById("register-otp");
+    if (codeInput) codeInput.value = "";
+    const otpHint = document.getElementById("register-otp-hint");
+    if (otpHint) {
+        otpHint.style.display = data.otpCode ? "block" : "none";
+        if (data.otpCode) otpHint.textContent = `Your verification code (dev): ${data.otpCode}`;
+    }
+    if (errorEl) { errorEl.style.color = "var(--accent-cyan)"; errorEl.textContent = "A new code has been sent."; }
+}
+
+// ── Google OAuth (popup flow via google_oauth.html) ────────────
+function handleGoogleLogin() {
+    const w = 480, h = 580;
+    const left = Math.round(screen.width / 2 - w / 2);
+    const top  = Math.round(screen.height / 2 - h / 2);
+    window.open(
+        "google_oauth.html",
+        "google_oauth",
+        `width=${w},height=${h},top=${top},left=${left},resizable=no,scrollbars=no`
+    );
+}
+
+async function handleGoogleAuthSuccess({ name, email }) {
+    if (!name || !email) return;
+
+    const errorEl = document.getElementById("login-error");
+    if (errorEl) errorEl.textContent = "";
+
+    // Use the dedicated oauth-login endpoint which upserts the user
+    const { response, data } = await apiFetch("/api/auth/oauth-login", {
+        method: "POST",
+        body: JSON.stringify({ name, email, provider: "google" }),
+    });
+
+    if (!response.ok) {
+        if (errorEl) errorEl.textContent = data?.error || "Google sign-in failed.";
+        return;
+    }
+
+    setAccessToken(data.accessToken);
+    currentUser = data.user;
+    updateAuthUI();
+    showToast(`Welcome, ${currentUser.name || name}!`, "success");
+    const dest = pendingRedirectView || "home";
+    pendingRedirectView = null;
+    switchView(dest);
+}
+
+// ── Toast notification ─────────────────────────────────────────
+function showToast(message, type = "info") {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement("div");
+    toast.className = `app-toast app-toast-${type}`;
+    toast.innerHTML = `<i class="fas ${type === "success" ? "fa-check-circle" : type === "error" ? "fa-exclamation-circle" : "fa-info-circle"}"></i> ${message}`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add("app-toast-show"));
+    setTimeout(() => {
+        toast.classList.remove("app-toast-show");
+        toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+    }, 3800);
+}
+
+function handleSparePartFiles(files) {
+    const maxFiles = 10;
+    const maxSize = 5 * 1024 * 1024;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    const previewContainer = document.getElementById("spare-upload-previews");
+    if (!previewContainer) return;
+
+    for (let i = 0; i < files.length; i++) {
+        if (sparePartUploadedImages.length >= maxFiles) {
+            alert("Maximum 10 images allowed.");
+            break;
+        }
+
+        const file = files[i];
+        if (!allowed.includes(file.type)) {
+            alert(`${file.name}: Only JPEG, PNG, and WebP are allowed.`);
+            continue;
+        }
+        if (file.size > maxSize) {
+            alert(`${file.name}: Maximum file size is 5 MB.`);
+            continue;
+        }
+
+        sparePartUploadedImages.push(file);
+
+        const idx = sparePartUploadedImages.length - 1;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const thumb = document.createElement("div");
+            thumb.className = "preview-thumb-wrapper";
+            thumb.setAttribute("data-spare-idx", idx);
+            thumb.innerHTML = `
+                <img src="${e.target.result}" alt="Spare part preview">
+                <button type="button" class="preview-remove-btn" onclick="removeSparePartImage(${idx})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewContainer.appendChild(thumb);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeSparePartImage(idx) {
+    sparePartUploadedImages.splice(idx, 1);
+    const previewContainer = document.getElementById("spare-upload-previews");
+    if (!previewContainer) return;
+    previewContainer.innerHTML = "";
+    sparePartUploadedImages.forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const thumb = document.createElement("div");
+            thumb.className = "preview-thumb-wrapper";
+            thumb.innerHTML = `
+                <img src="${e.target.result}" alt="Spare part preview">
+                <button type="button" class="preview-remove-btn" onclick="removeSparePartImage(${i})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewContainer.appendChild(thumb);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 // Prefill ad upload sheet with current user profile
 function prefillPostAdFormFromProfile() {
     const nameField = document.getElementById("ad-seller-name");
@@ -906,9 +1718,12 @@ function prefillPostAdFormFromProfile() {
     const emailField = document.getElementById("ad-seller-email");
     const locField = document.getElementById("ad-seller-location");
 
-    if (nameField && profile.name) nameField.value = profile.name;
+    const name = currentUser?.name || profile.name;
+    const email = currentUser?.email || profile.email;
+
+    if (nameField && name) nameField.value = name;
     if (phoneField && profile.phone) phoneField.value = profile.phone;
-    if (emailField && profile.email) emailField.value = profile.email;
+    if (emailField && email) emailField.value = email;
     if (locField && profile.location) syncCustomDropdown("ad-seller-location", profile.location);
 }
 
@@ -917,14 +1732,15 @@ function prefillSparePartsFormFromProfile() {
     const phoneField = document.getElementById("spare-seller-phone");
     const locationField = document.getElementById("spare-location");
 
-    if (nameField && profile.name) nameField.value = profile.name;
+    const name = currentUser?.name || profile.name;
+    if (nameField && name) nameField.value = name;
     if (phoneField && profile.phone) phoneField.value = profile.phone;
     if (locationField && profile.location) {
         syncCustomDropdown("spare-location", profile.location);
     }
 }
 
-function submitSparePart() {
+async function submitSparePart() {
     const form = document.getElementById("spare-parts-form");
     if (!form) return;
 
@@ -941,13 +1757,25 @@ function submitSparePart() {
         }
     });
 
+    if (sparePartUploadedImages.length === 0) {
+        alert("Please upload at least one image (max 10, 5 MB each).");
+        return;
+    }
+
     if (!isValid) {
         alert("Please fill all required spare part details.");
         return;
     }
 
-    const sparePart = {
-        id: "spare-" + Date.now(),
+    let imageUrls = [];
+    try {
+        imageUrls = await uploadImagesToCloud(sparePartUploadedImages);
+    } catch (err) {
+        alert(err.message || "Failed to upload images.");
+        return;
+    }
+
+    const payload = {
         name: document.getElementById("spare-part-name").value.trim(),
         category: document.getElementById("spare-part-category").value,
         compatible: document.getElementById("spare-compatible").value.trim(),
@@ -957,21 +1785,33 @@ function submitSparePart() {
         sellerName: document.getElementById("spare-seller-name").value.trim(),
         sellerPhone: document.getElementById("spare-seller-phone").value.trim(),
         description: document.getElementById("spare-description").value.trim(),
-        dateAdded: new Date().toISOString().split("T")[0]
+        images: imageUrls,
     };
 
-    spareParts.unshift(sparePart);
-    localStorage.setItem("ceylonsuper_spare_parts", JSON.stringify(spareParts));
+    const { response, data } = await apiFetch("/api/spare-parts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
 
+    if (!response.ok) {
+        alert(data?.error || "Failed to submit spare part.");
+        return;
+    }
+
+    await fetchSparePartsFromServer();
     resetSparePartsForm();
     renderSparePartsList();
     renderSidebarCounts();
-    alert("Spare part details submitted successfully.");
+    alert("Spare part listed successfully.");
 }
 
 function resetSparePartsForm() {
     const form = document.getElementById("spare-parts-form");
     if (form) form.reset();
+
+    sparePartUploadedImages = [];
+    const previewContainer = document.getElementById("spare-upload-previews");
+    if (previewContainer) previewContainer.innerHTML = "";
 
     syncCustomDropdown("spare-part-category", "Performance");
     syncCustomDropdown("spare-condition", "Brand New");
@@ -994,8 +1834,18 @@ function renderSparePartsList() {
         return;
     }
 
-    container.innerHTML = spareParts.map(part => `
-        <article class="spare-part-card">
+    container.innerHTML = spareParts.map(part => {
+        const thumb = part.images && part.images[0]
+            ? `<img src="${part.images[0]}" alt="${part.name}" class="spare-part-thumb">`
+            : "";
+        const isOwner = currentUser && part.publisherId === currentUser.id;
+        const deleteBtn = isOwner
+            ? `<button type="button" class="btn-my-ad-action btn-delete" onclick="deleteSparePartListing('${part.id}')"><i class="fas fa-trash-alt"></i> Delete</button>`
+            : "";
+
+        return `
+        <article class="spare-part-card ${thumb ? "spare-part-card-with-img" : ""}">
+            ${thumb}
             <div>
                 <div class="spare-part-title">${part.name}</div>
                 <div class="spare-part-meta">
@@ -1005,15 +1855,34 @@ function renderSparePartsList() {
                 </div>
                 <p>${part.description}</p>
             </div>
-            <div class="spare-part-side">
+            <div class="spare-part-side spare-part-actions">
                 <span class="spare-part-condition">${part.condition}</span>
                 <strong>${formatPriceLKR(part.price)}</strong>
                 <a href="tel:${part.sellerPhone}" class="btn-my-ad-action">
                     <i class="fas fa-phone"></i> Contact
                 </a>
+                ${deleteBtn}
             </div>
         </article>
-    `).join("");
+    `;
+    }).join("");
+}
+
+async function deleteSparePartListing(id) {
+    showDeleteConfirmModal(
+        "Are you sure you want to remove this listing? This action cannot be undone.",
+        async () => {
+            const { response, data } = await apiFetch(`/api/spare-parts/${id}`, { method: "DELETE" });
+            if (!response.ok) {
+                alert(data?.error || "Failed to delete listing.");
+                return;
+            }
+            await fetchSparePartsFromServer();
+            renderSparePartsList();
+            renderMySparePartsList();
+            renderSidebarCounts();
+        }
+    );
 }
 
 // Render User Profile page parameters
@@ -1045,6 +1914,7 @@ function renderProfileView() {
 
     // 3. Render Listings posted by user
     renderMyAdsList();
+    renderMySparePartsList();
 }
 
 // Render My Listings sub-tab in Profile page
@@ -1053,14 +1923,17 @@ function renderMyAdsList() {
     if (!container) return;
 
     container.innerHTML = "";
-    const myAds = ads.filter(a => a.id.includes("custom") || a.sellerPhone === profile.phone);
+    const myAds = ads.filter(a => {
+        if (currentUser && a.publisherId) return a.publisherId === currentUser.id;
+        return a.id.includes("custom") || a.sellerPhone === profile.phone;
+    });
 
     if (myAds.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding: 40px 10px; color: var(--text-secondary)">
                 <i class="fas fa-car-side" style="font-size:2.5rem; margin-bottom:12px; color:var(--text-muted)"></i>
                 <p>You have not posted any premium vehicle ads yet.</p>
-                <button type="button" class="btn-post" style="margin: 15px auto 0; padding:8px 18px" onclick="switchView('post-ad')">Post Ad Now</button>
+                <button type="button" class="btn-post" style="margin: 15px auto 0; padding:8px 18px" onclick="switchView('post-ad')">Post Ad</button>
             </div>
         `;
         return;
@@ -1084,22 +1957,75 @@ function renderMyAdsList() {
     });
 }
 
+function renderMySparePartsList() {
+    const container = document.getElementById("my-spare-parts-container-list");
+    if (!container) return;
+
+    container.innerHTML = "";
+    if (!currentUser) {
+        container.innerHTML = `<p style="color:var(--text-secondary); padding:16px 0">Login to manage your spare parts listings.</p>`;
+        return;
+    }
+
+    const myParts = spareParts.filter(p => p.publisherId === currentUser.id);
+
+    if (myParts.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding: 24px 10px; color: var(--text-secondary)">
+                <i class="fas fa-cogs" style="font-size:2rem; margin-bottom:10px; color:var(--text-muted)"></i>
+                <p>No spare parts listings yet.</p>
+                <button type="button" class="btn-post" style="margin: 12px auto 0; padding:8px 18px" onclick="switchView('spare-parts')">List Spare Part</button>
+            </div>
+        `;
+        return;
+    }
+
+    myParts.forEach(part => {
+        const card = document.createElement("div");
+        card.className = "my-ad-card";
+        const img = part.images && part.images[0] ? part.images[0] : "";
+        card.innerHTML = `
+            ${img ? `<img src="${img}" alt="${part.name}" class="my-ad-img">` : `<div class="my-ad-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)"><i class="fas fa-cogs"></i></div>`}
+            <div class="my-ad-info">
+                <div class="my-ad-title">${part.name}</div>
+                <div class="my-ad-price">${formatPriceLKR(part.price)}</div>
+            </div>
+            <div class="my-ad-actions">
+                <button type="button" class="btn-my-ad-action btn-delete" onclick="deleteSparePartListing('${part.id}')"><i class="fas fa-trash-alt"></i> Delete</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
 // Delete user ad
 function deleteMyAd(event, id) {
     event.stopPropagation();
-    if (!confirm("Are you sure you want to delete this listing permanently?")) return;
 
-    const idx = ads.findIndex(a => a.id === id);
-    if (idx > -1) {
-        const deletedTitle = ads[idx].title;
-        ads.splice(idx, 1);
-        localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
+    showDeleteConfirmModal(
+        "Are you sure you want to remove this listing? This action cannot be undone.",
+        async () => {
+            const ad = ads.find(a => a.id === id);
+            if (!ad) return;
 
-        renderProfileView();
-        renderSidebarCounts();
-        renderListings();
-        alert("Listing for '" + deletedTitle + "' deleted successfully.");
-    }
+            if (currentUser && ad.publisherId) {
+                const { response, data } = await apiFetch(`/api/ads/${id}`, { method: "DELETE" });
+                if (!response.ok) {
+                    alert(data?.error || "Failed to delete listing.");
+                    return;
+                }
+            } else {
+                const idx = ads.findIndex(a => a.id === id);
+                if (idx > -1) ads.splice(idx, 1);
+                localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
+            }
+
+            await fetchAdsFromServer();
+            renderProfileView();
+            renderSidebarCounts();
+            renderListings();
+        }
+    );
 }
 
 // Save User Profile detail parameters
@@ -1155,10 +2081,8 @@ function renderSidebarCounts() {
 
     const countSupercars = document.getElementById("count-supercars");
     const countSuperbikes = document.getElementById("count-superbikes");
-    const countSpareParts = document.getElementById("count-spare-parts");
     if (countSupercars) countSupercars.innerText = totalSupercars;
     if (countSuperbikes) countSuperbikes.innerText = totalSuperbikes;
-    if (countSpareParts) countSpareParts.innerText = spareParts.length;
 
     // Location counts
     const locations = ["Colombo", "Gampaha", "Kandy", "Galle", "Kurunegala", "Negombo"];
@@ -1268,11 +2192,20 @@ function formatPriceLKR(price) {
     return "LKR " + price.toLocaleString("en-LK");
 }
 
-function formatPriceUSD(priceLkr) {
-    // Assume 1 USD = 300 LKR for rough mock conversion
-    const priceUsd = Math.round(priceLkr / 300);
-    return "$" + priceUsd.toLocaleString("en-US");
+// Display only LKR (removed USD conversion)
+function formatPriceUSD(_priceLkr) {
+    return "";
 }
+
+// Swap Ceylon Force logo based on theme
+function setCeylonForceLogoForCurrentTheme() {
+    const img = document.querySelector("img.hero-logo");
+    if (!img) return;
+
+    const isLight = document.body.classList.contains("theme-light");
+    img.src = isLight ? "images/Ceylon Force (black).png" : "images/Ceylon Force (white).png";
+}
+
 
 // Render vehicle listings grid/list
 function renderListings() {
@@ -1621,9 +2554,7 @@ function openDetailsModal(id) {
                         <i class="fas fa-phone-alt"></i> Reveal Contact Number
                     </button>
                     
-                    <button class="contact-action-btn btn-chat" onclick="openChatSimulator('${ad.sellerName}', '${ad.title}')">
-                        <i class="far fa-comments"></i> Chat with Agent
-                    </button>
+
                     
                     <div class="safety-tips-box">
                         <h4><i class="fas fa-shield-alt"></i> Safety Warnings</h4>
@@ -1762,6 +2693,10 @@ function validateStep(step) {
         }
     });
 
+    if (step === 2 && !validateEngineCapacity(true)) {
+        isValid = false;
+    }
+
     if (step === 3 && uploadedImages.length === 0) {
         const customUrlInput = document.getElementById("ad-unsplash-urls");
         if (!customUrlInput || !customUrlInput.value.trim()) {
@@ -1778,9 +2713,22 @@ function handleUploadedFiles(files) {
     const previewContainer = document.getElementById("upload-previews-container");
     if (!previewContainer) return;
 
+    const maxFiles = 10;
+    const maxSize = 5 * 1024 * 1024;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+
     for (let i = 0; i < files.length; i++) {
+        if (uploadedImages.length >= maxFiles) {
+            alert("Maximum 10 images allowed.");
+            break;
+        }
+
         const file = files[i];
-        if (!file.type.match("image.*")) continue;
+        if (!allowed.includes(file.type)) continue;
+        if (file.size > maxSize) {
+            alert(`${file.name}: Maximum file size is 5 MB.`);
+            continue;
+        }
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -1824,8 +2772,13 @@ function removeUploadedImage(idx) {
     });
 }
 
-// Submit the ad and store in localStorage
-function submitNewAd() {
+// Submit the ad — creates draft then opens Stripe payment
+async function submitNewAd() {
+    if (!validateEngineCapacity(true)) {
+        goToStep(2);
+        return;
+    }
+
     const type = document.getElementById("ad-type").value;
     const make = document.getElementById("ad-make").value;
     const model = document.getElementById("ad-model").value;
@@ -1837,6 +2790,7 @@ function submitNewAd() {
     const transmission = document.getElementById("ad-transmission").value;
     const fuel = document.getElementById("ad-fuel").value;
     const engine = document.getElementById("ad-engine").value;
+    const engineCapacity = parseEngineCapacity(document.getElementById("ad-engine-capacity").value);
     const power = document.getElementById("ad-power").value || "";
     const topSpeed = parseInt(document.getElementById("ad-speed").value) || 299;
     const zeroToHundred = document.getElementById("ad-acceleration").value || "";
@@ -1849,7 +2803,17 @@ function submitNewAd() {
     const sellerEmail = document.getElementById("ad-seller-email").value;
     const location = document.getElementById("ad-seller-location").value;
 
-    let images = [...uploadedImages];
+    let images = [];
+
+    try {
+        if (uploadedImages.length > 0) {
+            images = await uploadImagesToCloud(uploadedImages);
+        }
+    } catch (err) {
+        alert(err.message || "Failed to upload images to cloud storage.");
+        return;
+    }
+
     const customUrlInput = document.getElementById("ad-unsplash-urls");
     if (customUrlInput && customUrlInput.value.trim()) {
         const urls = customUrlInput.value.split(",").map(url => url.trim()).filter(url => url.length > 0);
@@ -1857,15 +2821,11 @@ function submitNewAd() {
     }
 
     if (images.length === 0) {
-        images.push(type === "supercar" ?
-            "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=800&q=80" :
-            "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80"
-        );
+        alert("Please upload at least one image or provide a web image URL.");
+        return;
     }
 
-    const newAd = {
-        id: "cs-custom-" + Date.now(),
-        title: `${make} ${model} ${year}`,
+    const payload = {
         type,
         make,
         model,
@@ -1876,6 +2836,7 @@ function submitNewAd() {
         transmission,
         fuel,
         engine,
+        engineCapacity,
         power,
         topSpeed,
         zeroToHundred,
@@ -1886,27 +2847,63 @@ function submitNewAd() {
         sellerEmail,
         description,
         images,
-        dateAdded: new Date().toISOString().split('T')[0],
-        featured: false
     };
 
-    ads.unshift(newAd);
-    localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
+    const submitBtn = document.getElementById("btn-submit-ad");
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+    }
+
+    const { response, data } = await apiFetch("/api/ads", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Post Ad';
+    }
+
+    if (!response.ok) {
+        alert(data?.error || "Failed to create ad.");
+        return;
+    }
 
     resetPostForm();
+    await fetchAdsFromServer();
     renderSidebarCounts();
-    alert("Success! Your premium listing for the " + make + " " + model + " has been posted successfully.");
+    renderListings();
+    alert("Ad posted successfully.");
     switchView("home");
 }
+
 
 function resetPostForm() {
     document.getElementById("post-ad-form").reset();
     uploadedImages = [];
     const previewContainer = document.getElementById("upload-previews-container");
     if (previewContainer) previewContainer.innerHTML = "";
+    const errorEl = document.getElementById("engine-capacity-error");
+    if (errorEl) errorEl.style.display = "none";
     activeStep = 1;
     goToStep(1);
 }
+
+// Stripe payment UI removed (ads are posted immediately)
+async function openPaymentModal(_ad) {
+    // no-op
+}
+
+
+function closePaymentModal() {
+    // no-op (Stripe UI removed)
+}
+
+async function confirmStripePayment() {
+    // no-op (Stripe UI removed)
+}
+
 
 function syncCustomDropdown(dropdownId, value) {
     const hiddenInput = document.getElementById(dropdownId);
@@ -2077,3 +3074,260 @@ window.removeUploadedImage = removeUploadedImage;
 window.sendMessage = sendMessage;
 window.deleteMyAd = deleteMyAd;
 window.saveUserProfile = saveUserProfile;
+window.deleteSparePartListing = deleteSparePartListing;
+window.removeSparePartImage = removeSparePartImage;
+
+// ── Announcements ──────────────────────────────────────────────
+(function initAnnouncements() {
+    const btnNew         = document.getElementById("btn-new-announcement");
+    const formWrap       = document.getElementById("announcement-form-wrapper");
+    const btnClose       = document.getElementById("announcement-form-close");
+    const btnCancel      = document.getElementById("ann-cancel-btn");
+    const form           = document.getElementById("announcement-form");
+    const list           = document.getElementById("announcements-list");
+    const pagination     = document.getElementById("ann-pagination");
+    const prevBtn        = document.getElementById("ann-prev-btn");
+    const nextBtn        = document.getElementById("ann-next-btn");
+    const pageNumbers    = document.getElementById("ann-page-numbers");
+
+    const PAGE_SIZE = 10;
+    let currentPage = 1;
+
+    // Master data store — each entry mirrors what the DOM cards contain
+    // Seed with the 5 sample announcements (newest first)
+    let announcements = [
+        {
+            category: "update",
+            tag: { label: "Platform Update", icon: "fa-bell", cls: "ann-tag-update" },
+            title: "CeylonSuperHub v2.0 is Live — Faster, Smarter, Better",
+            body:  "We've completely overhauled the platform with a new search engine, real-time watchlist sync, verified seller badges, and a streamlined post-ad experience. Thank you for being part of the journey.",
+            author: "CeylonSuperHub Team",
+            date: "July 4, 2026",
+            img: null,
+            pinned: true
+        },
+        {
+            category: "event",
+            tag: { label: "Event", icon: "fa-calendar-alt", cls: "ann-tag-event" },
+            title: "Ceylon Supercar Showcase 2026 — Colombo Raceway",
+            body:  "Join us at the annual Ceylon Supercar Showcase on August 15th at Colombo Raceway. Over 50 elite vehicles on display, including exclusive previews of newly imported Ferraris and Lamborghinis. Free entry for registered CeylonSuperHub members.",
+            author: "Events Team",
+            date: "June 28, 2026",
+            img: null,
+            pinned: false
+        },
+        {
+            category: "offer",
+            tag: { label: "Offer", icon: "fa-tag", cls: "ann-tag-offer" },
+            title: "Free Featured Listings for First 100 Sellers This Month",
+            body:  "To celebrate our platform growth, we're giving away 100 free Featured Ad slots — normally LKR 4,999 each. Post your supercar or superbike before June 30th to claim yours. First come, first served.",
+            author: "CeylonSuperHub Team",
+            date: "June 20, 2026",
+            img: null,
+            pinned: false
+        },
+        {
+            category: "news",
+            tag: { label: "News", icon: "fa-newspaper", cls: "ann-tag-news" },
+            title: "Verified Seller Badges Now Available — Apply Today",
+            body:  "We've launched our Verified Seller programme. Sellers with a verified badge have passed identity and vehicle ownership checks, giving buyers added confidence. Apply through your Profile page.",
+            author: "Trust & Safety Team",
+            date: "June 10, 2026",
+            img: null,
+            pinned: false
+        },
+        {
+            category: "update",
+            tag: { label: "Update", icon: "fa-bell", cls: "ann-tag-update" },
+            title: "New Districts Added — Northern & Eastern Province Listings",
+            body:  "Jaffna, Batticaloa, Trincomalee, and 5 more districts are now searchable. If you're based in the Northern or Eastern Province, update your listings to appear in local searches.",
+            author: "Platform Team",
+            date: "May 30, 2026",
+            img: null,
+            pinned: false
+        },
+        {
+            category: "news",
+            tag: { label: "News", icon: "fa-newspaper", cls: "ann-tag-news" },
+            title: "CeylonSuperHub Partners with Ceylon Force Automotive",
+            body:  "We're proud to announce our official partnership with Ceylon Force Automotive, Sri Lanka's leading supercar importer. Expect exclusive listings, priority import previews, and co-branded events throughout 2026.",
+            author: "CeylonSuperHub Team",
+            date: "May 15, 2026",
+            img: null,
+            pinned: false
+        }
+    ];
+
+    // ── Render helpers ───────────────────────────────────────────
+
+    function buildCardHTML(ann) {
+        return `
+            <div class="ann-card-side ann-side-${ann.category}"></div>
+            <div class="ann-card-body">
+                <div class="ann-card-top">
+                    <span class="ann-tag ${ann.tag.cls}"><i class="fas ${ann.tag.icon}"></i> ${ann.tag.label}</span>
+                    <span class="ann-date"><i class="fas fa-clock"></i> ${ann.date}</span>
+                </div>
+                <h3 class="ann-card-title">${ann.title}</h3>
+                ${ann.img ? `<div class="ann-card-img-wrap"><img src="${ann.img}" alt="${ann.title}" class="ann-card-img"></div>` : ""}
+                <p class="ann-card-text">${ann.body}</p>
+                <div class="ann-card-footer">
+                    <span class="ann-author"><i class="fas fa-user"></i> ${ann.author}</span>
+                </div>
+            </div>`;
+    }
+
+    function renderPage(page) {
+        // Non-pinned announcements only in the paged list
+        const nonPinned = announcements.filter(a => !a.pinned);
+        const totalPages = Math.max(1, Math.ceil(nonPinned.length / PAGE_SIZE));
+        currentPage = Math.min(Math.max(1, page), totalPages);
+
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const slice = nonPinned.slice(start, start + PAGE_SIZE);
+
+        // Render cards
+        list.innerHTML = "";
+        slice.forEach(ann => {
+            const card = document.createElement("article");
+            card.className = "announcement-card glass";
+            card.innerHTML = buildCardHTML(ann);
+            list.appendChild(card);
+        });
+
+        // Show / hide pagination
+        if (totalPages <= 1) {
+            pagination.style.display = "none";
+            return;
+        }
+        pagination.style.display = "flex";
+
+        // Prev / Next buttons
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+
+        // Page number buttons
+        pageNumbers.innerHTML = "";
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement("button");
+            btn.className = "ann-page-num" + (i === currentPage ? " active" : "");
+            btn.textContent = i;
+            btn.addEventListener("click", () => goToPage(i));
+            pageNumbers.appendChild(btn);
+        }
+    }
+
+    function goToPage(page) {
+        renderPage(page);
+        // Scroll list into view smoothly
+        list.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Initial render
+    renderPage(1);
+
+    // Pagination button listeners
+    if (prevBtn) prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
+    if (nextBtn) nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
+
+    // ── Image preview wiring ─────────────────────────────────────
+    const imgInput       = document.getElementById("ann-image");
+    const imgPreview     = document.getElementById("ann-img-preview");
+    const imgPlaceholder = document.getElementById("ann-img-placeholder");
+    const imgRemove      = document.getElementById("ann-img-remove");
+    let currentImgDataUrl = null;
+
+    if (imgInput) {
+        imgInput.addEventListener("change", function () {
+            const file = this.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Image must be under 5 MB.");
+                this.value = "";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                currentImgDataUrl = e.target.result;
+                imgPreview.src = currentImgDataUrl;
+                imgPreview.style.display = "block";
+                imgPlaceholder.style.display = "none";
+                imgRemove.style.display = "inline-flex";
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (imgRemove) {
+        imgRemove.addEventListener("click", function () {
+            currentImgDataUrl = null;
+            imgInput.value = "";
+            imgPreview.src = "";
+            imgPreview.style.display = "none";
+            imgPlaceholder.style.display = "flex";
+            imgRemove.style.display = "none";
+        });
+    }
+
+    // ── Form show / hide ─────────────────────────────────────────
+    function showForm() {
+        formWrap.style.display = "block";
+        formWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    function hideForm() {
+        formWrap.style.display = "none";
+        form.reset();
+        currentImgDataUrl = null;
+        if (imgPreview)     { imgPreview.src = ""; imgPreview.style.display = "none"; }
+        if (imgPlaceholder) { imgPlaceholder.style.display = "flex"; }
+        if (imgRemove)      { imgRemove.style.display = "none"; }
+        if (imgInput)       { imgInput.value = ""; }
+    }
+
+    if (btnNew)    btnNew.addEventListener("click", showForm);
+    if (btnClose)  btnClose.addEventListener("click", hideForm);
+    if (btnCancel) btnCancel.addEventListener("click", hideForm);
+
+    // ── Publish ──────────────────────────────────────────────────
+    if (form) {
+        form.addEventListener("submit", function () {
+            const title    = document.getElementById("ann-title").value.trim();
+            const body     = document.getElementById("ann-body").value.trim();
+            const author   = document.getElementById("ann-author").value.trim() || "CeylonSuperHub Team";
+            const category = form.querySelector("input[name='ann-category']:checked")?.value || "news";
+
+            if (!title || !body) return;
+
+            const tagMap = {
+                news:   { label: "News",   icon: "fa-newspaper",    cls: "ann-tag-news"   },
+                event:  { label: "Event",  icon: "fa-calendar-alt", cls: "ann-tag-event"  },
+                offer:  { label: "Offer",  icon: "fa-tag",          cls: "ann-tag-offer"  },
+                update: { label: "Update", icon: "fa-bell",         cls: "ann-tag-update" }
+            };
+            const now = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+            // Prepend to data store (newest first)
+            announcements.unshift({
+                category,
+                tag: tagMap[category],
+                title,
+                body,
+                author,
+                date: now,
+                img: currentImgDataUrl,
+                pinned: false
+            });
+
+            hideForm();
+            // Jump to page 1 so the new item is visible immediately
+            goToPage(1);
+
+            // Flash highlight on first card
+            const firstCard = list.querySelector(".announcement-card");
+            if (firstCard) {
+                firstCard.classList.add("ann-card-new");
+                setTimeout(() => firstCard.classList.remove("ann-card-new"), 1200);
+            }
+        });
+    }
+})();
