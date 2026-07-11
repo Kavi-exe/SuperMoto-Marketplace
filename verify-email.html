@@ -30,7 +30,8 @@
         <!-- OTP Input -->
         <div class="form-group">
           <label for="otp">Verification Code</label>
-          <p class="form-help">Enter the 6-digit code from your email</p>
+          <p class="form-help" id="emailHelp">Enter the 6-digit code from your email</p>
+
           <div class="otp-input-container">
             <input
               type="text"
@@ -63,6 +64,10 @@
             >
               Resend Code
             </button>
+            <p class="form-help" id="resendHelp" style="margin-top: 8px; color: #9a9ab0; font-size: 12px; display: none;">
+              If email is not configured, check the backend console for the OTP.
+            </p>
+
             <p class="resend-attempts" id="resendAttempts"></p>
           </div>
         </div>

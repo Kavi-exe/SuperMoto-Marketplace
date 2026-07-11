@@ -1,4 +1,5 @@
 // ── Configuration ──────────────────────────────────────────────────────────
+
 const API_BASE_URL = 'http://localhost:3001/api';
 const OTP_EXPIRATION_SECONDS = 15 * 60; // 15 minutes
 
@@ -39,6 +40,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Display email
   document.getElementById('emailDisplay').textContent = state.email;
+
+  // Show actionable hint if backend email may be disabled
+  // (When GMAIL_APP_PASSWORD is not set, server logs the OTP as [email:dev] ...)
+  const resendHelp = document.getElementById('resendHelp');
+  if (resendHelp) resendHelp.style.display = 'block';
+
 
   // Set expiration time
   state.expirationTime = Date.now() + (OTP_EXPIRATION_SECONDS * 1000);
@@ -105,7 +112,10 @@ async function handleVerifySubmit(e) {
   setVerifyButtonLoading(true);
   clearMessages();
 
+  // If email sending is disabled on the server, OTP is logged as [email:dev] in the backend console.
+
   try {
+
     const response = await fetch(`${API_BASE_URL}/auth/verify-registration`, {
       method: 'POST',
       headers: {
