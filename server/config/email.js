@@ -31,61 +31,181 @@ function isEmailConfigured() {
 
 // ── HTML template ─────────────────────────────────────────────────────────────
 function buildVerificationEmailHtml(otpCode, userName) {
-  const name = userName ? String(userName).trim().split(' ')[0] : 'there';
+  const name = userName ? String(userName).trim().split(' ')[0] : 'User';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify your CeylonSuperHub account</title>
+  <title>Verify your CeylonSuperHub Account</title>
   <style>
-    body { margin: 0; padding: 0; background: #0a0a0f; font-family: 'Segoe UI', Arial, sans-serif; }
-    .wrapper { max-width: 560px; margin: 40px auto; background: #13131a; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); }
-    .header { background: linear-gradient(135deg, #0a0a0f 0%, #13131a 100%); padding: 36px 40px 28px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    .logo { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }
-    .logo span { color: #00d4ff; }
-    .body { padding: 36px 40px; }
-    .greeting { font-size: 20px; font-weight: 700; color: #f0f0f5; margin: 0 0 12px; }
-    .text { font-size: 15px; color: #9a9ab0; line-height: 1.7; margin: 0 0 28px; }
-    .otp-box { background: #0a0a0f; border: 1px solid rgba(0, 212, 255, 0.25); border-radius: 12px; padding: 24px; text-align: center; margin: 0 0 28px; }
-    .otp-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #9a9ab0; margin: 0 0 12px; }
-    .otp-code { font-size: 42px; font-weight: 800; letter-spacing: 10px; color: #00d4ff; margin: 0; font-variant-numeric: tabular-nums; }
-    .otp-expiry { font-size: 12px; color: #9a9ab0; margin: 12px 0 0; }
-    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 0 0 24px; }
-    .warning { font-size: 13px; color: #9a9ab0; line-height: 1.6; margin: 0 0 8px; }
-    .warning strong { color: #f0f0f5; }
-    .footer { background: #0d0d14; padding: 20px 40px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
-    .footer-text { font-size: 12px; color: #5a5a70; margin: 0; }
-    .footer-text a { color: #00d4ff; text-decoration: none; }
+    * { box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      padding: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; 
+      background-color: #f6f8fa;
+      color: #24292e;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .header {
+      background-color: #f6f8fa;
+      padding: 16px 24px;
+      text-align: center;
+      border-bottom: 1px solid #e1e4e8;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 600;
+      color: #24292e;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+    .logo-highlight {
+      color: #0366d6;
+    }
+    .content {
+      padding: 24px 24px;
+      line-height: 1.6;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #24292e;
+      margin: 0 0 12px;
+    }
+    .description {
+      font-size: 14px;
+      color: #586069;
+      margin: 0 0 20px;
+    }
+    .code-box {
+      background-color: #f6f8fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      padding: 16px 24px;
+      margin: 24px 0;
+      text-align: center;
+    }
+    .code-label {
+      font-size: 12px;
+      color: #586069;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 8px;
+      display: block;
+    }
+    .code-value {
+      font-size: 36px;
+      font-weight: 600;
+      color: #0366d6;
+      margin: 0;
+      letter-spacing: 4px;
+      font-family: 'Courier New', monospace;
+      word-spacing: 8px;
+    }
+    .code-expiry {
+      font-size: 12px;
+      color: #586069;
+      margin: 8px 0 0;
+    }
+    .code-expiry strong {
+      color: #24292e;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #e1e4e8;
+      margin: 20px 0;
+    }
+    .warning {
+      background-color: #fafbfc;
+      border-left: 4px solid #f6be45;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #24292e;
+    }
+    .warning strong {
+      color: #24292e;
+      font-weight: 600;
+    }
+    .security-info {
+      background-color: #fafbfc;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 16px 0;
+      font-size: 13px;
+      color: #586069;
+    }
+    .footer {
+      background-color: #fafbfc;
+      border-top: 1px solid #e1e4e8;
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #586069;
+    }
+    .footer a {
+      color: #0366d6;
+      text-decoration: none;
+    }
+    .footer-text {
+      margin: 0;
+    }
   </style>
 </head>
 <body>
-  <div class="wrapper">
+  <div class="email-container">
     <div class="header">
-      <div class="logo">Ceylon<span>Super</span>Hub</div>
+      <p class="logo">Ceylon<span class="logo-highlight">Super</span>Hub</p>
     </div>
-    <div class="body">
-      <p class="greeting">Hey ${name}, welcome! 👋</p>
-      <p class="text">
-        You're one step away from joining <strong style="color:#f0f0f5">CeylonSuperHub</strong> — Sri Lanka's premier marketplace for elite vehicles and performance machines.<br><br>
-        Use the verification code below to confirm your email address and activate your account.
+    
+    <div class="content">
+      <p class="greeting">Verify your email, ${name}</p>
+      
+      <p class="description">
+        Thank you for registering with CeylonSuperHub. To complete your registration and verify your email address, please use the verification code below.
       </p>
 
-      <div class="otp-box">
-        <p class="otp-label">Your verification code</p>
-        <p class="otp-code">${otpCode}</p>
-        <p class="otp-expiry">This code expires in <strong>15 minutes</strong></p>
+      <div class="code-box">
+        <span class="code-label">Your verification code</span>
+        <p class="code-value">${otpCode}</p>
+        <p class="code-expiry">This code is valid for <strong>15 minutes</strong> and can only be used once.</p>
       </div>
 
-      <hr class="divider">
+      <div class="warning">
+        <strong>🔒 Never share this code</strong> with anyone. CeylonSuperHub will never ask for it on the phone or via email.
+      </div>
 
-      <p class="warning">🔒 <strong>Never share this code</strong> with anyone. CeylonSuperHub will never ask for it by phone or chat.</p>
-      <p class="warning">If you didn't create an account, you can safely ignore this email.</p>
+      <div class="security-info">
+        <p style="margin: 0; font-weight: 600;">How to verify:</p>
+        <ol style="margin: 8px 0 0; padding-left: 20px; color: #586069;">
+          <li>Go to the CeylonSuperHub verification page</li>
+          <li>Enter your email address</li>
+          <li>Enter the 6-digit code above</li>
+          <li>Click "Verify & Continue"</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e1e4e8; font-size: 13px; color: #586069;">
+        <p style="margin: 0 0 8px;">If you did not create this account, you can safely ignore this email.</p>
+        <p style="margin: 0;">If you're having trouble, please contact us at <a href="mailto:theceylonsuperhub@gmail.com" style="color: #0366d6;">theceylonsuperhub@gmail.com</a></p>
+      </div>
     </div>
+
     <div class="footer">
       <p class="footer-text">
-        &copy; ${new Date().getFullYear()} CeylonSuperHub &nbsp;·&nbsp;
-        <a href="mailto:theceylonsuperhub@gmail.com">theceylonsuperhub@gmail.com</a>
+        © ${new Date().getFullYear()} CeylonSuperHub. All rights reserved.<br>
+        <a href="https://theceylonsuperhub.com">Visit our website</a> · 
+        <a href="mailto:theceylonsuperhub@gmail.com">Contact support</a>
       </p>
     </div>
   </div>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - CeylonSuperHub</title>
+  <link rel="stylesheet" href="verify-email.css">
+</head>
+<body>
+  <div class="verification-container">
+    <div class="verification-card">
+      <!-- Header -->
+      <div class="verification-header">
+        <div class="logo">Ceylon<span>Super</span>Hub</div>
+        <h1>Verify Your Email</h1>
+        <p class="subtitle">We've sent a verification code to your email</p>
+      </div>
+
+      <!-- Main Content -->
+      <form id="verificationForm" class="verification-form">
+        <!-- Email Display -->
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="email-display">
+            <span id="emailDisplay"></span>
+            <button type="button" class="change-email-btn" onclick="changeEmail()">Change</button>
+          </div>
+        </div>
+
+        <!-- OTP Input -->
+        <div class="form-group">
+          <label for="otp">Verification Code</label>
+          <p class="form-help">Enter the 6-digit code from your email</p>
+          <div class="otp-input-container">
+            <input
+              type="text"
+              id="otp"
+              name="otp"
+              placeholder="000000"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]{6}"
+              required
+              class="otp-input"
+            />
+          </div>
+          <p class="form-error" id="otpError"></p>
+        </div>
+
+        <!-- Timer and Resend -->
+        <div class="timer-resend-container">
+          <div class="timer-section">
+            <p class="timer-label">Code expires in:</p>
+            <div class="timer-display" id="timerDisplay">15:00</div>
+          </div>
+          <div class="resend-section">
+            <p class="resend-label">Didn't receive code?</p>
+            <button
+              type="button"
+              id="resendBtn"
+              class="resend-btn"
+              onclick="resendCode()"
+            >
+              Resend Code
+            </button>
+            <p class="resend-attempts" id="resendAttempts"></p>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="message-container">
+          <div class="error-message" id="errorMessage" style="display: none;"></div>
+          <div class="success-message" id="successMessage" style="display: none;"></div>
+          <div class="info-message" id="infoMessage" style="display: none;"></div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="verify-btn" id="verifyBtn">
+          <span class="btn-text">Verify Email</span>
+          <span class="btn-loader" style="display: none;">
+            <span class="spinner"></span> Verifying...
+          </span>
+        </button>
+      </form>
+
+      <!-- Additional Actions -->
+      <div class="additional-actions">
+        <p>Having trouble?</p>
+        <button type="button" class="link-btn" onclick="startNewRegistration()">
+          Start New Registration
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="verification-footer">
+        <p>🔒 Your code is secure. Never share it with anyone.</p>
+      </div>
+    </div>
+
+    <!-- Branding -->
+    <div class="branding">
+      <p>&copy; 2024 CeylonSuperHub. All rights reserved.</p>
+    </div>
+  </div>
+
+  <!-- Modal for changing email -->
+  <div class="modal" id="changeEmailModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Start New Registration</h2>
+        <button type="button" class="modal-close" onclick="closeChangeEmailModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>You'll need to go back and register with a new email address.</p>
+        <p>Your current verification session will be cancelled.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeChangeEmailModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn-primary" onclick="confirmStartNewRegistration()">
+          Start New Registration
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script src="verify-email.js"></script>
+</html>

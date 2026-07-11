@@ -23,6 +23,13 @@ const {
   createEmailVerificationOtp,
   getLatestUnexpiredOtpForUserEmail,
   markOtpAsUsed,
+  incrementVerificationFailedAttempts,
+  resetVerificationFailedAttempts,
+  lockVerificationAttempts,
+  isVerificationLocked,
+  recordResendAttempt,
+  getResendAttemptsInWindow,
+  cleanupOldResendAttempts,
   getAllActiveAds,
   getAdById,
   createAd,
@@ -161,6 +168,30 @@ function isEmailDomainAllowed(email) {
   return ALLOWED_EMAIL_DOMAINS.includes(domain);
 }
 
+// ── OTP Generation & Hashing ───────────────────────────────────────────────
+function generateOtp() {
+  // Generate a random 6-digit OTP using crypto for better randomness
+  const randomBytes = crypto.randomBytes(3);
+  const randomNum = randomBytes.readUIntBE(0, 3) % 1000000;
+  return String(randomNum).padStart(6, '0');
+}
+
+async function hashOtp(otp) {
+  // Use bcrypt for secure OTP hashing (more secure than plain SHA256)
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(String(otp), salt);
+}
+
+async function verifyOtp(otp, hash) {
+  // Compare OTP with hash using bcrypt
+  return bcrypt.compare(String(otp), hash);
+}
+
+function createOtpVerificationCodeHash(otpCode) {
+  // For backward compatibility, keep this for now but use bcrypt in new code
+  return crypto.createHash('sha256').update(String(otpCode)).digest('hex');
+}
+
 app.get('/api/config/public', (_req, res) => {
   res.json({
     ok: true,
@@ -246,9 +277,26 @@ async function resendOtp(req, res) {
       return res.status(400).json({ ok: false, error: 'Email is already verified' });
     }
 
-    // Issue a new OTP
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpCodeHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    // Check resend rate limit (max 3 attempts per 15 minutes)
+    const RESEND_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+    const MAX_RESEND_ATTEMPTS = 3;
+    
+    const resendCount = await getResendAttemptsInWindow(db, userId, RESEND_WINDOW_MS);
+    
+    if (resendCount >= MAX_RESEND_ATTEMPTS) {
+      db.close();
+      return res.status(429).json({
+        ok: false,
+        error: 'Too many resend requests. Please wait 15 minutes before trying again.'
+      });
+    }
+
+    // Record this resend attempt
+    await recordResendAttempt(db, userId);
+
+    // Generate a new OTP using secure random generation
+    const otpCode = generateOtp();
+    const otpCodeHash = createOtpVerificationCodeHash(otpCode);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     await createEmailVerificationOtp(db, {
@@ -272,7 +320,9 @@ async function resendOtp(req, res) {
 
     return res.json({
       ok: true,
+      message: 'Verification code sent successfully',
       verificationToken: newVerificationToken,
+      resendAttemptsRemaining: MAX_RESEND_ATTEMPTS - resendCount - 1,
       // Only expose the raw code in dev mode (no email configured)
       ...(emailResult.devMode && { otpCode }),
     });
@@ -313,33 +363,81 @@ async function verifyRegistrationOtp(req, res) {
       return res.status(400).json({ ok: false, error: 'OTP must be a 6-digit code' });
     }
 
-    const otpHash = createOtpVerificationCodeHash(otpStr);
     const db = openDb();
-
-    const nowIso = new Date().toISOString();
-    const latestOtp = await getLatestUnexpiredOtpForUserEmail(db, { userId, email, nowIso });
-    if (!latestOtp) {
-      db.close();
-      return res.status(400).json({ ok: false, error: 'OTP expired or no pending verification found' });
-    }
-
-    if (latestOtp.code_hash !== otpHash) {
-      db.close();
-      return res.status(401).json({ ok: false, error: 'Invalid OTP code' });
-    }
-
-    await markOtpAsUsed(db, latestOtp.id);
-    await markUserEmailVerified(db, userId);
-
     const user = await getUserById(db, userId);
-    db.close();
 
     if (!user) {
+      db.close();
       return res.status(404).json({ ok: false, error: 'User not found' });
     }
 
-    const accessToken = await issueTokens(res, user);
-    return res.json({ ok: true, user: publicUser(user), accessToken });
+    // Check if account is locked due to too many failed attempts
+    const isLocked = await isVerificationLocked(db, userId);
+    if (isLocked) {
+      const lockedUntil = new Date(user.verification_locked_until);
+      const now = new Date();
+      const minutesRemaining = Math.ceil((lockedUntil - now) / (60 * 1000));
+      db.close();
+      return res.status(429).json({
+        ok: false,
+        error: `Too many failed verification attempts. Please try again in ${minutesRemaining} minutes.`
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const latestOtp = await getLatestUnexpiredOtpForUserEmail(db, { userId, email, nowIso });
+    
+    if (!latestOtp) {
+      db.close();
+      return res.status(400).json({ ok: false, error: 'Verification code expired. Please request a new one.' });
+    }
+
+    const otpHash = createOtpVerificationCodeHash(otpStr);
+
+    if (latestOtp.code_hash !== otpHash) {
+      // Track failed attempt
+      await incrementVerificationFailedAttempts(db, userId);
+      const failedAttempts = user.verification_failed_attempts + 1;
+      
+      const MAX_FAILED_ATTEMPTS = 5;
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        // Lock account for 30 minutes
+        const lockUntilTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        await lockVerificationAttempts(db, userId, lockUntilTime);
+        db.close();
+        return res.status(429).json({
+          ok: false,
+          error: 'Too many failed verification attempts. Account locked for 30 minutes.'
+        });
+      }
+
+      db.close();
+      return res.status(401).json({
+        ok: false,
+        error: 'Invalid verification code',
+        attemptsRemaining: MAX_FAILED_ATTEMPTS - failedAttempts
+      });
+    }
+
+    // Successful verification - reset failed attempts and mark email as verified
+    await resetVerificationFailedAttempts(db, userId);
+    await markOtpAsUsed(db, latestOtp.id);
+    await markUserEmailVerified(db, userId);
+
+    const verifiedUser = await getUserById(db, userId);
+    db.close();
+
+    if (!verifiedUser) {
+      return res.status(404).json({ ok: false, error: 'User not found' });
+    }
+
+    const accessToken = await issueTokens(res, verifiedUser);
+    return res.json({
+      ok: true,
+      message: 'Email verified successfully',
+      user: publicUser(verifiedUser),
+      accessToken
+    });
   } catch (err) {
     console.error('[verify-registration]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
@@ -428,8 +526,8 @@ async function registerUser(req, res) {
       await updateUnverifiedUserCredentials(db, existing.id, String(name).trim(), passwordHash);
       const user = await getUserById(db, existing.id);
 
-      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-      const otpCodeHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+      const otpCode = generateOtp();
+      const otpCodeHash = createOtpVerificationCodeHash(otpCode);
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
       await createEmailVerificationOtp(db, {
@@ -441,12 +539,21 @@ async function registerUser(req, res) {
 
       db.close();
 
+      // Send verification email
+      const emailResult = await sendVerificationEmail({
+        to: normalizedEmail,
+        otpCode,
+        userName: user.name,
+      });
+
       const verificationToken = jwtSignEmailVerificationToken(user.id, normalizedEmail);
       return res.json({
         ok: true,
+        message: 'Registration code sent. Check your email to verify.',
         verificationRequired: true,
         verificationToken,
-        otpCode,
+        // Only expose the raw code in dev mode (no email configured)
+        ...(emailResult.devMode && { otpCode }),
       });
     }
 
@@ -458,12 +565,12 @@ async function registerUser(req, res) {
       emailVerified: 0,
     });
 
-    // 6-digit OTP
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpCodeHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    // Generate secure 6-digit OTP
+    const otpCode = generateOtp();
+    const otpCodeHash = createOtpVerificationCodeHash(otpCode);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    // store OTP (hash only)
+    // Store OTP (hash only)
     await createEmailVerificationOtp(db, {
       userId: user.id,
       email: normalizedEmail,
@@ -473,16 +580,23 @@ async function registerUser(req, res) {
 
     db.close();
 
+    // Send verification email
+    const emailResult = await sendVerificationEmail({
+      to: normalizedEmail,
+      otpCode,
+      userName: user.name,
+    });
+
     // Create a short-lived verification token
     const verificationToken = jwtSignEmailVerificationToken(user.id, normalizedEmail);
 
-    // NOTE: no email provider yet; return OTP for now in response.
-    // In production, remove `otp` from the response and send it via email.
     return res.json({
       ok: true,
+      message: 'Registration successful! Check your email for the verification code.',
       verificationRequired: true,
       verificationToken,
-      otpCode,
+      // Only expose the raw code in dev mode (no email configured)
+      ...(emailResult.devMode && { otpCode }),
     });
   } catch (err) {
     console.error('[register]', err);

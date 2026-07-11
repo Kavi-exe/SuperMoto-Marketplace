@@ -156,6 +156,40 @@ async function migrateSchema(db) {
   if (!colNames.has('email_verified')) {
     await run(db, "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
   }
+
+  if (!colNames.has('verification_failed_attempts')) {
+    await run(db, "ALTER TABLE users ADD COLUMN verification_failed_attempts INTEGER NOT NULL DEFAULT 0");
+  }
+
+  if (!colNames.has('verification_locked_until')) {
+    await run(db, "ALTER TABLE users ADD COLUMN verification_locked_until TEXT");
+  }
+
+  if (!colNames.has('last_resend_attempt_at')) {
+    await run(db, "ALTER TABLE users ADD COLUMN last_resend_attempt_at TEXT");
+  }
+
+  if (!colNames.has('resend_attempts_in_window')) {
+    await run(db, "ALTER TABLE users ADD COLUMN resend_attempts_in_window INTEGER NOT NULL DEFAULT 0");
+  }
+
+  // Create resend_otp_tracking table if it doesn't exist
+  const otpTrackingTableCheck = await get(
+    db,
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='resend_otp_tracking'"
+  );
+
+  if (!otpTrackingTableCheck) {
+    await run(
+      db,
+      `CREATE TABLE IF NOT EXISTS resend_otp_tracking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        attempted_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`
+    );
+  }
 }
 
 async function getUserByEmail(db, email) {
@@ -402,6 +436,71 @@ async function seedPreloadedAds(db, ads) {
   }
 }
 
+// ── Verification attempt tracking ──────────────────────────────────────────
+async function incrementVerificationFailedAttempts(db, userId) {
+  await run(
+    db,
+    'UPDATE users SET verification_failed_attempts = verification_failed_attempts + 1 WHERE id = ?',
+    [userId]
+  );
+}
+
+async function resetVerificationFailedAttempts(db, userId) {
+  await run(
+    db,
+    'UPDATE users SET verification_failed_attempts = 0 WHERE id = ?',
+    [userId]
+  );
+}
+
+async function lockVerificationAttempts(db, userId, lockUntil) {
+  await run(
+    db,
+    'UPDATE users SET verification_locked_until = ? WHERE id = ?',
+    [lockUntil, userId]
+  );
+}
+
+async function isVerificationLocked(db, userId) {
+  const user = await getUserById(db, userId);
+  if (!user || !user.verification_locked_until) {
+    return false;
+  }
+  const now = new Date();
+  const lockedUntil = new Date(user.verification_locked_until);
+  return now < lockedUntil;
+}
+
+// ── Resend OTP attempt tracking ────────────────────────────────────────────
+async function recordResendAttempt(db, userId) {
+  const attemptedAt = new Date().toISOString();
+  await run(
+    db,
+    'INSERT INTO resend_otp_tracking (user_id, attempted_at) VALUES (?, ?)',
+    [userId, attemptedAt]
+  );
+}
+
+async function getResendAttemptsInWindow(db, userId, windowMs) {
+  const cutoffTime = new Date(Date.now() - windowMs).toISOString();
+  const result = await get(
+    db,
+    `SELECT COUNT(*) as count FROM resend_otp_tracking
+     WHERE user_id = ? AND attempted_at > ?`,
+    [userId, cutoffTime]
+  );
+  return result?.count || 0;
+}
+
+async function cleanupOldResendAttempts(db, userId, windowMs) {
+  const cutoffTime = new Date(Date.now() - windowMs).toISOString();
+  await run(
+    db,
+    'DELETE FROM resend_otp_tracking WHERE user_id = ? AND attempted_at <= ?',
+    [userId, cutoffTime]
+  );
+}
+
 module.exports = {
   DB_PATH,
   openDb,
@@ -418,6 +517,13 @@ module.exports = {
   createEmailVerificationOtp,
   getLatestUnexpiredOtpForUserEmail,
   markOtpAsUsed,
+  incrementVerificationFailedAttempts,
+  resetVerificationFailedAttempts,
+  lockVerificationAttempts,
+  isVerificationLocked,
+  recordResendAttempt,
+  getResendAttemptsInWindow,
+  cleanupOldResendAttempts,
   getAllActiveAds,
   getAdById,
   createAd,

@@ -1,0 +1,543 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #0a0a0f;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #f0f0f5;
+}
+
+/* ── Main Container ─────────────────────────────────────────────────────── */
+.verification-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #0a0a0f 0%, #13131a 100%);
+}
+
+.verification-card {
+  background: #13131a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.verification-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.logo span {
+  color: #00d4ff;
+}
+
+.verification-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f0f0f5;
+}
+
+.verification-header .subtitle {
+  font-size: 14px;
+  color: #9a9ab0;
+  line-height: 1.6;
+}
+
+/* ── Form Styles ────────────────────────────────────────────────────────── */
+.verification-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f5;
+}
+
+.form-help {
+  font-size: 13px;
+  color: #9a9ab0;
+  margin: 0;
+}
+
+/* ── Email Display ──────────────────────────────────────────────────────── */
+.email-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0a0a0f;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #f0f0f5;
+}
+
+.change-email-btn {
+  background: transparent;
+  border: none;
+  color: #00d4ff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.change-email-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+/* ── OTP Input ──────────────────────────────────────────────────────────── */
+.otp-input-container {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.otp-input {
+  background: #0a0a0f;
+  border: 2px solid rgba(0, 212, 255, 0.25);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  color: #00d4ff;
+  width: 100%;
+  letter-spacing: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s ease;
+}
+
+.otp-input:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+
+.otp-input::placeholder {
+  color: rgba(0, 212, 255, 0.3);
+}
+
+.otp-input.error {
+  border-color: #ff4757;
+  color: #ff4757;
+}
+
+.form-error {
+  font-size: 12px;
+  color: #ff4757;
+  margin: 0;
+  display: none;
+}
+
+.form-error.show {
+  display: block;
+}
+
+/* ── Timer and Resend Section ───────────────────────────────────────────── */
+.timer-resend-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 8px;
+}
+
+.timer-section {
+  text-align: center;
+}
+
+.timer-label {
+  font-size: 12px;
+  color: #9a9ab0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.timer-display {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00d4ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-display.expiring {
+  color: #ffa502;
+}
+
+.timer-display.expired {
+  color: #ff4757;
+}
+
+.resend-section {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.resend-label {
+  font-size: 12px;
+  color: #9a9ab0;
+  margin-bottom: 8px;
+}
+
+.resend-btn {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid #00d4ff;
+  color: #00d4ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.resend-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.2);
+}
+
+.resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.resend-attempts {
+  font-size: 11px;
+  color: #9a9ab0;
+  margin-top: 4px;
+}
+
+/* ── Messages ───────────────────────────────────────────────────────────── */
+.message-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.error-message,
+.success-message,
+.info-message {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  display: none;
+}
+
+.error-message {
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  color: #ff4757;
+}
+
+.error-message.show {
+  display: block;
+}
+
+.success-message {
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.success-message.show {
+  display: block;
+}
+
+.info-message {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+}
+
+.info-message.show {
+  display: block;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.verify-btn {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  border: none;
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.verify-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 212, 255, 0.3);
+}
+
+.verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-text,
+.btn-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Additional Actions ─────────────────────────────────────────────────── */
+.additional-actions {
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.additional-actions p {
+  font-size: 13px;
+  color: #9a9ab0;
+  margin-bottom: 12px;
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #00d4ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: opacity 0.3s ease;
+}
+
+.link-btn:hover {
+  opacity: 0.8;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.verification-footer {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  color: #9a9ab0;
+}
+
+.branding {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 12px;
+  color: #5a5a70;
+}
+
+/* ── Modal Styles ───────────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #13131a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 400px;
+  width: 90%;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f0f0f5;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #9a9ab0;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+  color: #f0f0f5;
+}
+
+.modal-body {
+  padding: 24px;
+  font-size: 14px;
+  color: #9a9ab0;
+  line-height: 1.6;
+}
+
+.modal-body p {
+  margin-bottom: 12px;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  color: #000;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f0f0f5;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Responsive Design ──────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .verification-card {
+    padding: 24px;
+  }
+
+  .verification-header h1 {
+    font-size: 24px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .timer-resend-container {
+    grid-template-columns: 1fr;
+  }
+
+  .otp-input {
+    font-size: 28px;
+    letter-spacing: 8px;
+  }
+
+  .verification-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .verification-card {
+    padding: 20px;
+  }
+
+  .verification-header h1 {
+    font-size: 20px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .verify-btn {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+}
