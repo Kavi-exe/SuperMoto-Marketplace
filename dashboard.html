@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard — CeylonSuperHub</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="theme-dark dash-body">
+
+<div class="dash-layout">
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="dash-sidebar-overlay" id="dash-sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="dash-sidebar" id="dash-sidebar">
+    <div class="dash-sidebar-logo">
+      <a href="/" class="logo-text">Ceylon<span style="color:var(--accent-primary)">Super</span>Hub</a>
+    </div>
+    <nav class="dash-nav">
+      <a href="#" class="dash-nav-item active" data-panel="overview"><i class="fas fa-th-large"></i> Overview</a>
+      <div class="dash-nav-group-label">Listings</div>
+      <a href="#" class="dash-nav-item" data-panel="my-listings"><i class="fas fa-car"></i> My Listings</a>
+      <a href="#" class="dash-nav-item" data-panel="post-listing"><i class="fas fa-plus-circle"></i> Post New Listing</a>
+      <a href="#" class="dash-nav-item" data-panel="spare-parts"><i class="fas fa-cogs"></i> Spare Parts</a>
+      <div class="dash-nav-group-label">Account</div>
+      <a href="#" class="dash-nav-item" data-panel="favourites"><i class="fas fa-heart"></i> Favourites</a>
+      <a href="#" class="dash-nav-item" data-panel="profile"><i class="fas fa-user-edit"></i> Edit Profile</a>
+      <a href="#" class="dash-nav-item" data-panel="security"><i class="fas fa-lock"></i> Security</a>
+      <a href="#" class="dash-nav-item" data-panel="notifications"><i class="fas fa-bell"></i> Notifications</a>
+    </nav>
+    <div class="dash-sidebar-footer">
+      <a href="/" class="dash-nav-item"><i class="fas fa-home"></i> Back to Site</a>
+      <button class="dash-nav-item dash-logout-btn" id="dash-logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="dash-main">
+
+    <!-- Topbar -->
+    <header class="dash-topbar glass">
+      <button class="dash-sidebar-toggle" id="dash-sidebar-toggle"><i class="fas fa-bars"></i></button>
+      <div class="dash-topbar-title" id="dash-topbar-title">Overview</div>
+      <div class="dash-topbar-right">
+        <a href="/" class="dash-topbar-link" title="Go to marketplace"><i class="fas fa-search"></i></a>
+        <div class="dash-topbar-avatar" id="dash-topbar-avatar"><i class="fas fa-user-circle"></i></div>
+        <span class="dash-topbar-name" id="dash-topbar-name">—</span>
+      </div>
+    </header>
+
+    <!-- Breadcrumb -->
+    <div class="dash-breadcrumb" id="dash-breadcrumb">
+      <a href="/">Home</a> <i class="fas fa-chevron-right"></i>
+      <span id="dash-breadcrumb-current">Overview</span>
+    </div>
+
+    <!-- Panels -->
+    <div class="dash-panels" id="dash-panels">
+
+      <!-- ── Overview Panel ── -->
+      <section class="dash-panel active" id="panel-overview">
+        <div class="dash-welcome-bar" id="dash-welcome-bar">
+          <div>
+            <h2 class="dash-welcome-title">Welcome back, <span id="dash-welcome-name">—</span> 👋</h2>
+            <p class="dash-welcome-sub">Here's a summary of your activity on CeylonSuperHub.</p>
+          </div>
+          <a href="#" class="dash-btn primary" onclick="dashSwitchPanel('post-listing');return false"><i class="fas fa-plus"></i> Post New Listing</a>
+        </div>
+
+        <div class="dash-stat-grid" id="dash-stat-grid">
+          <div class="dash-stat-card">
+            <div class="dash-stat-icon blue"><i class="fas fa-car"></i></div>
+            <div class="dash-stat-info">
+              <div class="dash-stat-num" id="dstat-total">—</div>
+              <div class="dash-stat-label">Total Listings</div>
+            </div>
+          </div>
+          <div class="dash-stat-card">
+            <div class="dash-stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div class="dash-stat-info">
+              <div class="dash-stat-num" id="dstat-active">—</div>
+              <div class="dash-stat-label">Active</div>
+            </div>
+          </div>
+          <div class="dash-stat-card">
+            <div class="dash-stat-icon orange"><i class="fas fa-clock"></i></div>
+            <div class="dash-stat-info">
+              <div class="dash-stat-num" id="dstat-pending">—</div>
+              <div class="dash-stat-label">Pending</div>
+            </div>
+          </div>
+          <div class="dash-stat-card">
+            <div class="dash-stat-icon purple"><i class="fas fa-cogs"></i></div>
+            <div class="dash-stat-info">
+              <div class="dash-stat-num" id="dstat-parts">—</div>
+              <div class="dash-stat-label">Spare Parts</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="dash-section-label">Recent Listings</p>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Listing</th><th>Type</th><th>Price</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="overview-listings-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── My Listings Panel ── -->
+      <section class="dash-panel" id="panel-my-listings">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">My Listings</h2>
+          <a href="#" class="dash-btn primary sm" onclick="dashSwitchPanel('post-listing');return false"><i class="fas fa-plus"></i> Post New</a>
+        </div>
+        <div class="dash-search-row">
+          <input type="text" class="dash-input" id="listings-search" placeholder="Search your listings…" oninput="dashListingsSearchDebounced()">
+          <select class="dash-select" id="listings-status-filter" onchange="loadMyListings()">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="pending_payment">Pending</option>
+            <option value="removed">Removed</option>
+          </select>
+        </div>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Photo</th><th>Title</th><th>Type</th><th>Price</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="my-listings-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dash-pagination" id="listings-pagination"></div>
+      </section>
+
+      <!-- ── Post New Listing Panel ── -->
+      <section class="dash-panel" id="panel-post-listing">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">Post New Listing</h2>
+        </div>
+        <div class="dash-card">
+          <p style="color:var(--text-secondary);margin-bottom:18px">Create your vehicle or superbike listing from the main marketplace page.</p>
+          <a href="/" class="dash-btn primary"><i class="fas fa-external-link-alt"></i> Go to Post Ad Form</a>
+        </div>
+      </section>
+
+      <!-- ── Spare Parts Panel ── -->
+      <section class="dash-panel" id="panel-spare-parts">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">My Spare Parts</h2>
+        </div>
+        <div class="dash-table-wrap">
+          <table class="dash-table">
+            <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="my-parts-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Favourites Panel ── -->
+      <section class="dash-panel" id="panel-favourites">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">Saved Favourites</h2>
+        </div>
+        <div id="favourites-grid" class="dash-fav-grid">
+          <div class="dash-empty-state"><i class="fas fa-heart"></i><p>No saved favourites yet.<br>Browse listings and click ❤ to save.</p><a href="/" class="dash-btn secondary sm" style="margin-top:12px">Browse Listings</a></div>
+        </div>
+      </section>
+
+      <!-- ── Edit Profile Panel ── -->
+      <section class="dash-panel" id="panel-profile">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">Edit Profile</h2>
+        </div>
+        <div class="dash-card" style="max-width:560px">
+          <div class="dash-avatar-row">
+            <div class="dash-avatar" id="dash-profile-avatar"><i class="fas fa-user-circle"></i></div>
+            <div>
+              <div class="dash-stat-num" id="dash-profile-name-display" style="font-size:1.1rem">—</div>
+              <div style="font-size:0.82rem;color:var(--text-muted)" id="dash-profile-email-display">—</div>
+              <span class="dash-role-badge" id="dash-profile-role-badge">User</span>
+            </div>
+          </div>
+          <form id="dash-profile-form" onsubmit="return false;" style="margin-top:20px">
+            <div class="dash-form-group">
+              <label class="dash-form-label">Full Name</label>
+              <input type="text" class="dash-form-input" id="prof-name" placeholder="Your full name" required>
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">Email Address</label>
+              <input type="email" class="dash-form-input" id="prof-email" placeholder="your@email.com" readonly style="opacity:.6;cursor:not-allowed">
+              <span style="font-size:0.75rem;color:var(--text-muted)">Email cannot be changed.</span>
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">Phone Number</label>
+              <input type="text" class="dash-form-input" id="prof-phone" placeholder="+94 77 000 0000">
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">Location / District</label>
+              <input type="text" class="dash-form-input" id="prof-location" placeholder="e.g. Colombo">
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">Short Bio</label>
+              <textarea class="dash-form-input" id="prof-bio" rows="3" placeholder="Tell others about yourself…"></textarea>
+            </div>
+            <button type="submit" class="dash-btn primary" onclick="saveProfile()"><i class="fas fa-save"></i> Save Profile</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ── Security Panel ── -->
+      <section class="dash-panel" id="panel-security">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">Security</h2>
+        </div>
+        <div class="dash-card" style="max-width:480px;margin-bottom:20px">
+          <h4 style="margin-bottom:14px"><i class="fas fa-key" style="color:var(--accent-primary);margin-right:8px"></i>Change Password</h4>
+          <form id="dash-pw-form" onsubmit="return false;">
+            <div class="dash-form-group">
+              <label class="dash-form-label">Current Password</label>
+              <input type="password" class="dash-form-input" id="sec-current-pw" placeholder="Current password">
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">New Password</label>
+              <input type="password" class="dash-form-input" id="sec-new-pw" placeholder="Min 8 characters">
+            </div>
+            <div class="dash-form-group">
+              <label class="dash-form-label">Confirm New Password</label>
+              <input type="password" class="dash-form-input" id="sec-confirm-pw" placeholder="Repeat new password">
+            </div>
+            <p class="dash-form-error" id="sec-pw-error"></p>
+            <button type="submit" class="dash-btn primary" onclick="changePassword()"><i class="fas fa-shield-alt"></i> Update Password</button>
+          </form>
+        </div>
+        <div class="dash-card" style="max-width:480px">
+          <h4 style="margin-bottom:10px"><i class="fas fa-mobile-alt" style="color:var(--accent-cyan);margin-right:8px"></i>Two-Factor Authentication</h4>
+          <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:14px">Add an extra layer of security to your account with 2FA.</p>
+          <div class="dash-info-pill"><i class="fas fa-info-circle"></i> 2FA setup will be available in a future update.</div>
+        </div>
+      </section>
+
+      <!-- ── Notifications Panel ── -->
+      <section class="dash-panel" id="panel-notifications">
+        <div class="dash-panel-header">
+          <h2 class="dash-panel-title">Notifications</h2>
+        </div>
+        <div class="dash-card" style="max-width:560px">
+          <div class="dash-toggle-row" style="margin-bottom:16px">
+            <div>
+              <div style="font-weight:500;margin-bottom:3px">Email Notifications</div>
+              <div style="font-size:0.82rem;color:var(--text-muted)">Receive updates about your listings via email</div>
+            </div>
+            <label class="dash-toggle"><input type="checkbox" id="notif-email" checked><span class="dash-toggle-slider"></span></label>
+          </div>
+          <div class="dash-toggle-row" style="margin-bottom:16px">
+            <div>
+              <div style="font-weight:500;margin-bottom:3px">Listing Approvals</div>
+              <div style="font-size:0.82rem;color:var(--text-muted)">Get notified when your listing is approved or rejected</div>
+            </div>
+            <label class="dash-toggle"><input type="checkbox" id="notif-approvals" checked><span class="dash-toggle-slider"></span></label>
+          </div>
+          <div class="dash-toggle-row">
+            <div>
+              <div style="font-weight:500;margin-bottom:3px">Platform Announcements</div>
+              <div style="font-size:0.82rem;color:var(--text-muted)">Receive CeylonSuperHub news and updates</div>
+            </div>
+            <label class="dash-toggle"><input type="checkbox" id="notif-announcements"><span class="dash-toggle-slider"></span></label>
+          </div>
+          <button class="dash-btn primary" style="margin-top:20px" onclick="saveNotifPrefs()"><i class="fas fa-save"></i> Save Preferences</button>
+        </div>
+      </section>
+
+    </div><!-- /.dash-panels -->
+  </div><!-- /.dash-main -->
+</div><!-- /.dash-layout -->
+
+<!-- Confirm Modal -->
+<div class="dash-modal-overlay" id="dash-modal-overlay">
+  <div class="dash-modal">
+    <p class="dash-modal-title" id="dash-modal-title">Confirm</p>
+    <p class="dash-modal-msg" id="dash-modal-msg">Are you sure?</p>
+    <div class="dash-modal-actions">
+      <button class="dash-btn secondary" id="dash-modal-cancel">Cancel</button>
+      <button class="dash-btn danger" id="dash-modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="dash-toast-container" id="dash-toast-container"></div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>
