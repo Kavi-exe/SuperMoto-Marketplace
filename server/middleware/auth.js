@@ -43,18 +43,6 @@ function requireAuth(req, res, next) {
   }
 }
 
-function requireAnyAdmin(req, res, next) {
-  if (!req.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-  if (req.user.role === 'admin' || req.user.role === 'super_admin') return next();
-  return res.status(403).json({ ok: false, error: 'Forbidden: admin access required' });
-}
-
-function requireSuperAdmin(req, res, next) {
-  if (!req.user) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-  if (req.user.role === 'super_admin') return next();
-  return res.status(403).json({ ok: false, error: 'Forbidden: super_admin access required' });
-}
-
 function optionalAuth(req, _res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -80,7 +68,5 @@ module.exports = {
   verifyAccessToken,
   verifyRefreshToken,
   requireAuth,
-  requireAnyAdmin,
-  requireSuperAdmin,
   optionalAuth,
 };

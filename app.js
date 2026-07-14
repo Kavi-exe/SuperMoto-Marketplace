@@ -195,20 +195,17 @@ function updateAuthUI() {
     const logoutBtn = document.getElementById("nav-logout-btn");
     const profileLink = document.getElementById("nav-profile-link");
     const postBtn = document.getElementById("nav-post-ad-btn");
-    const adminLink = document.getElementById("nav-admin-link");
 
     if (currentUser) {
         if (loginLink) loginLink.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "inline-flex";
         if (profileLink) profileLink.style.display = "";
         if (postBtn) postBtn.style.display = "";
-        if (adminLink) adminLink.style.display = (currentUser.role === "admin" || currentUser.role === "super_admin") ? "" : "none";
     } else {
         if (loginLink) loginLink.style.display = "";
         if (logoutBtn) logoutBtn.style.display = "none";
         if (profileLink) profileLink.style.display = "";
         if (postBtn) postBtn.style.display = "";
-        if (adminLink) adminLink.style.display = "none";
     }
 }
 
@@ -1425,14 +1422,6 @@ async function handleLogin() {
     setAccessToken(data.accessToken);
     currentUser = data.user;
     updateAuthUI();
-
-    // Role-based redirect
-    const role = data.user?.role || 'user';
-    if (role === 'admin' || role === 'super_admin') {
-        window.location.href = '/admin';
-        return;
-    }
-    // Regular user — go to user dashboard or intended view
     const dest = pendingRedirectView || "home";
     pendingRedirectView = null;
     switchView(dest);
@@ -1551,12 +1540,6 @@ async function handleVerifyRegistration() {
         setAccessToken(data.accessToken);
         currentUser = data.user;
         updateAuthUI();
-        // Role-based redirect after email verification
-        const role = data.user?.role || 'user';
-        if (role === 'admin' || role === 'super_admin') {
-            window.location.href = '/admin';
-            return;
-        }
         const dest = pendingRedirectView || "home";
         pendingRedirectView = null;
         switchView(dest);
@@ -1639,12 +1622,6 @@ async function handleGoogleAuthSuccess({ name, email }) {
     currentUser = data.user;
     updateAuthUI();
     showToast(`Welcome, ${currentUser.name || name}!`, "success");
-    // Role-based redirect for OAuth login
-    const role = data.user?.role || 'user';
-    if (role === 'admin' || role === 'super_admin') {
-        window.location.href = '/admin';
-        return;
-    }
     const dest = pendingRedirectView || "home";
     pendingRedirectView = null;
     switchView(dest);
