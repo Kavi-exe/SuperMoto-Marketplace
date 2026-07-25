@@ -1269,10 +1269,14 @@ function initParticleCanvas() {
 function switchView(viewName) {
     setMobileNavOpen(false);
 
-    // Show/hide footer based on view
+    // Show/hide footer and admin-active body class based on view
     const footer = document.querySelector(".main-footer");
-    if (footer) {
-        footer.style.display = viewName === "admin" ? "none" : "";
+    if (viewName === "admin") {
+        if (footer) footer.style.display = "none";
+        document.body.classList.add("admin-active");
+    } else {
+        if (footer) footer.style.display = "";
+        document.body.classList.remove("admin-active");
     }
 
     if (viewName && viewName.startsWith("admin-")) {
