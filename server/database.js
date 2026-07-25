@@ -141,6 +141,7 @@ async function initSchema() {
   );
 
   await migrateSchema(db);
+  await migrateAdminSchema(db);
 
   db.close();
 }
@@ -151,6 +152,18 @@ async function migrateSchema(db) {
 
   if (!colNames.has('role')) {
     await run(db, "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+  }
+
+  if (!colNames.has('status')) {
+    await run(db, "ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+  }
+
+  if (!colNames.has('last_login')) {
+    await run(db, 'ALTER TABLE users ADD COLUMN last_login TEXT');
+  }
+
+  if (!colNames.has('updated_at')) {
+    await run(db, 'ALTER TABLE users ADD COLUMN updated_at TEXT');
   }
 
   if (!colNames.has('email_verified')) {
@@ -190,6 +203,50 @@ async function migrateSchema(db) {
       )`
     );
   }
+}
+
+async function migrateAdminSchema(db) {
+  await run(
+    db,
+    `CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      ad_id TEXT,
+      type TEXT NOT NULL DEFAULT 'ad_posting',
+      amount INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'lkr',
+      stripe_payment_intent_id TEXT,
+      status TEXT NOT NULL DEFAULT 'succeeded',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )`
+  );
+
+  await run(
+    db,
+    `CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )`
+  );
+
+  await run(
+    db,
+    `CREATE TABLE IF NOT EXISTS admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      full_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      permissions TEXT NOT NULL DEFAULT 'all',
+      created_at TEXT NOT NULL,
+      last_login TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`
+  );
 }
 
 async function getUserByEmail(db, email) {
@@ -501,9 +558,216 @@ async function cleanupOldResendAttempts(db, userId, windowMs) {
   );
 }
 
+// ── Admin helper functions ──────────────────────────────────────
+async function getAllUsers(db, { search, sort, filter } = {}) {
+  let sql = 'SELECT id, name, email, role, status, email_verified, last_login, created_at FROM users WHERE 1=1';
+  const params = [];
+  if (search) {
+    sql += ' AND (name LIKE ? OR email LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+  if (filter === 'active') {
+    sql += " AND status = 'active'";
+  } else if (filter === 'disabled') {
+    sql += " AND status = 'disabled'";
+  } else if (filter === 'admin') {
+    sql += " AND role = 'admin'";
+  }
+  if (sort === 'name') {
+    sql += ' ORDER BY name ASC';
+  } else if (sort === 'email') {
+    sql += ' ORDER BY email ASC';
+  } else if (sort === 'recent') {
+    sql += ' ORDER BY created_at DESC';
+  } else {
+    sql += ' ORDER BY created_at DESC';
+  }
+  return all(db, sql, params);
+}
+
+async function getUserAdCount(db, userId) {
+  const row = await get(db, 'SELECT COUNT(*) as count FROM ads WHERE publisher_id = ?', [userId]);
+  return row ? row.count : 0;
+}
+
+async function updateUserStatus(db, userId, status) {
+  const now = new Date().toISOString();
+  await run(db, 'UPDATE users SET status = ?, updated_at = ? WHERE id = ?', [status, now, userId]);
+}
+
+async function deleteUserById(db, userId) {
+  await run(db, 'DELETE FROM users WHERE id = ?', [userId]);
+}
+
+async function getAllAds(db, { search, filter } = {}) {
+  let sql = 'SELECT * FROM ads WHERE 1=1';
+  const params = [];
+  if (search) {
+    sql += ' AND (title LIKE ? OR make LIKE ? OR model LIKE ? OR seller_name LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (filter === 'active') {
+    sql += " AND status = 'active'";
+  } else if (filter === 'pending') {
+    sql += " AND status = 'pending'";
+  } else if (filter === 'pending_payment') {
+    sql += " AND status = 'pending_payment'";
+  } else if (filter === 'suspended') {
+    sql += " AND status = 'suspended'";
+  }
+  sql += ' ORDER BY date_added DESC';
+  const rows = await all(db, sql, params);
+  return rows.map(parseAdRow);
+}
+
+async function updateAdFeatured(db, id, featured) {
+  await run(db, 'UPDATE ads SET featured = ? WHERE id = ?', [featured ? 1 : 0, id]);
+}
+
+async function getFeaturedAds(db) {
+  const rows = await all(db, "SELECT * FROM ads WHERE featured = 1 ORDER BY date_added DESC");
+  return rows.map(parseAdRow);
+}
+
+async function getPendingAds(db) {
+  const rows = await all(db, "SELECT * FROM ads WHERE status = 'pending' ORDER BY date_added DESC");
+  return rows.map(parseAdRow);
+}
+
+async function logActivity(db, userId, action, description) {
+  const now = new Date().toISOString();
+  await run(db, 'INSERT INTO activity_log (user_id, action, description, created_at) VALUES (?, ?, ?, ?)',
+    [userId || null, action, description || '', now]);
+}
+
+async function getRecentActivities(db, limit = 20) {
+  return all(db,
+    'SELECT a.*, u.name as user_name FROM activity_log a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.created_at DESC LIMIT ?',
+    [limit]);
+}
+
+async function createPayment(db, { userId, adId, type, amount, currency, stripePaymentIntentId, status }) {
+  const now = new Date().toISOString();
+  await run(db,
+    `INSERT INTO payments (user_id, ad_id, type, amount, currency, stripe_payment_intent_id, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId || null, adId || null, type, amount, currency || 'lkr', stripePaymentIntentId || null, status || 'succeeded', now]);
+}
+
+async function getRevenueStats(db) {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+
+  const allPayments = await all(db, "SELECT * FROM payments WHERE status = 'succeeded'");
+
+  const lifetimeRevenue = allPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  const todayRevenue = allPayments
+    .filter(p => p.created_at && p.created_at.startsWith(today))
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const weeklyRevenue = allPayments
+    .filter(p => p.created_at && p.created_at >= weekAgo)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const monthlyRevenue = allPayments
+    .filter(p => p.created_at && p.created_at >= monthStart)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const yearlyRevenue = allPayments
+    .filter(p => p.created_at && p.created_at >= yearStart)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  return { todayRevenue, weeklyRevenue, monthlyRevenue, yearlyRevenue, lifetimeRevenue };
+}
+
+async function getMonthlyRevenueData(db) {
+  const payments = await all(db, "SELECT * FROM payments WHERE status = 'succeeded' ORDER BY created_at ASC");
+  const monthly = {};
+  payments.forEach(p => {
+    if (p.created_at) {
+      const key = p.created_at.substring(0, 7);
+      monthly[key] = (monthly[key] || 0) + p.amount;
+    }
+  });
+  return monthly;
+}
+
+async function getMonthlyUserData(db) {
+  const users = await all(db, 'SELECT created_at FROM users ORDER BY created_at ASC');
+  const monthly = {};
+  users.forEach(u => {
+    if (u.created_at) {
+      const key = u.created_at.substring(0, 7);
+      monthly[key] = (monthly[key] || 0) + 1;
+    }
+  });
+  return monthly;
+}
+
+async function getMonthlyAdData(db) {
+  const ads = await all(db, 'SELECT date_added FROM ads ORDER BY date_added ASC');
+  const monthly = {};
+  ads.forEach(a => {
+    if (a.date_added) {
+      const key = a.date_added.substring(0, 7);
+      monthly[key] = (monthly[key] || 0) + 1;
+    }
+  });
+  return monthly;
+}
+
+async function getRecentPayments(db, limit = 20) {
+  return all(db,
+    `SELECT p.*, u.name as user_name FROM payments p LEFT JOIN users u ON p.user_id = u.id ORDER BY p.created_at DESC LIMIT ?`,
+    [limit]);
+}
+
+async function getDashboardStats(db) {
+  const totalUsers = await get(db, 'SELECT COUNT(*) as count FROM users');
+  const totalAds = await get(db, 'SELECT COUNT(*) as count FROM ads');
+  const activeListings = await get(db, "SELECT COUNT(*) as count FROM ads WHERE status = 'active'");
+  const featuredListings = await get(db, 'SELECT COUNT(*) as count FROM ads WHERE featured = 1');
+  const pendingApprovals = await get(db, "SELECT COUNT(*) as count FROM ads WHERE status = 'pending'");
+  const payments = await all(db, "SELECT * FROM payments WHERE status = 'succeeded'");
+  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  return {
+    totalUsers: totalUsers ? totalUsers.count : 0,
+    totalAds: totalAds ? totalAds.count : 0,
+    activeListings: activeListings ? activeListings.count : 0,
+    featuredListings: featuredListings ? featuredListings.count : 0,
+    pendingApprovals: pendingApprovals ? pendingApprovals.count : 0,
+    totalRevenue,
+  };
+}
+
+async function getAllAdmins(db) {
+  return all(db,
+    `SELECT a.*, u.role, u.status, u.last_login as user_last_login
+     FROM admins a JOIN users u ON a.user_id = u.id
+     ORDER BY a.created_at DESC`);
+}
+
+async function updateUserLastLogin(db, userId) {
+  const now = new Date().toISOString();
+  await run(db, 'UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?', [now, now, userId]);
+}
+
+async function updateAdminLastLogin(db, userId) {
+  const now = new Date().toISOString();
+  await run(db, 'UPDATE admins SET last_login = ? WHERE user_id = ?', [now, userId]);
+}
+
 module.exports = {
   DB_PATH,
   openDb,
+  run,
+  get,
+  all,
   initSchema,
   getUserByEmail,
   getUserById,
@@ -534,4 +798,25 @@ module.exports = {
   createSparePart,
   deleteSparePart,
   seedPreloadedAds,
+  // Admin functions
+  getAllUsers,
+  getUserAdCount,
+  updateUserStatus,
+  deleteUserById,
+  getAllAds,
+  updateAdFeatured,
+  getFeaturedAds,
+  getPendingAds,
+  logActivity,
+  getRecentActivities,
+  createPayment,
+  getRevenueStats,
+  getMonthlyRevenueData,
+  getMonthlyUserData,
+  getMonthlyAdData,
+  getRecentPayments,
+  getDashboardStats,
+  getAllAdmins,
+  updateUserLastLogin,
+  updateAdminLastLogin,
 };

@@ -54,6 +54,9 @@
                 <a href="#" class="nav-link" data-target-view="profile" id="nav-profile-link">
                     <i class="fas fa-user-circle"></i> Profile
                 </a>
+                <a href="#" class="nav-link" data-target-view="admin" id="nav-admin-link" style="display:none;">
+                    <i class="fas fa-shield-alt"></i> Admin
+                </a>
                 <a href="#" class="nav-link" data-target-view="login" id="nav-login-link">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
@@ -1248,6 +1251,230 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Admin SPA View Section -->
+    <div id="admin-section" class="view-section">
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <div class="admin-sidebar-header">
+                    <span class="admin-sidebar-logo">CeylonSuperHub</span>
+                    <span class="admin-sidebar-role">Admin Panel</span>
+                </div>
+                <nav class="admin-nav">
+                    <a href="#" class="admin-nav-link active" data-admin-view="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="users"><i class="fas fa-users"></i> Users</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="listings"><i class="fas fa-list"></i> Listings</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="featured"><i class="fas fa-star"></i> Featured</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="pending"><i class="fas fa-clock"></i> Pending Approvals</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="revenue"><i class="fas fa-dollar-sign"></i> Revenue</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="admins"><i class="fas fa-shield-alt"></i> Admins</a>
+                    <a href="#" class="admin-nav-link" data-admin-view="settings"><i class="fas fa-cog"></i> Settings</a>
+                    <a href="#" class="admin-nav-link admin-logout-link" id="admin-logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </nav>
+            </aside>
+            <main class="admin-content">
+                <!-- Dashboard -->
+                <div class="admin-panel active" data-admin-panel="dashboard">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-chart-pie"></i> Dashboard</h2>
+                        <span class="admin-date" id="admin-dashboard-date"></span>
+                    </div>
+                    <div class="admin-stats-grid" id="admin-dashboard-stats">
+                        <div class="admin-stat-card"><div class="stat-loading">Loading...</div></div>
+                    </div>
+                    <div class="admin-charts-grid">
+                        <div class="admin-chart-card">
+                            <h3>Monthly Revenue</h3>
+                            <div class="admin-chart-bars" id="chart-revenue"></div>
+                        </div>
+                        <div class="admin-chart-card">
+                            <h3>Monthly Users</h3>
+                            <div class="admin-chart-bars" id="chart-users"></div>
+                        </div>
+                        <div class="admin-chart-card">
+                            <h3>Monthly Ads</h3>
+                            <div class="admin-chart-bars" id="chart-ads"></div>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <h3>Recent Activities</h3>
+                        <div id="admin-recent-activities"><p class="admin-muted">Loading...</p></div>
+                    </div>
+                </div>
+
+                <!-- Users -->
+                <div class="admin-panel" data-admin-panel="users">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-users"></i> Users Management</h2>
+                        <div class="admin-search-bar">
+                            <input type="text" id="admin-users-search" placeholder="Search users..." class="admin-input">
+                            <button class="admin-btn" onclick="adminLoadUsers()"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="admin-toolbar">
+                        <select id="admin-users-filter" class="admin-select" onchange="adminLoadUsers()">
+                            <option value="">All Users</option>
+                            <option value="active">Active</option>
+                            <option value="disabled">Disabled</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                        <select id="admin-users-sort" class="admin-select" onchange="adminLoadUsers()">
+                            <option value="recent">Most Recent</option>
+                            <option value="name">Name</option>
+                            <option value="email">Email</option>
+                        </select>
+                    </div>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Ads</th><th>Registered</th><th>Last Login</th><th>Actions</th>
+                            </tr></thead>
+                            <tbody id="admin-users-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="admin-users-empty" class="admin-empty" style="display:none">No users found.</div>
+                </div>
+
+                <!-- Listings -->
+                <div class="admin-panel" data-admin-panel="listings">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-list"></i> Listings Management</h2>
+                        <div class="admin-search-bar">
+                            <input type="text" id="admin-listings-search" placeholder="Search listings..." class="admin-input">
+                            <button class="admin-btn" onclick="adminLoadListings()"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="admin-toolbar">
+                        <select id="admin-listings-filter" class="admin-select" onchange="adminLoadListings()">
+                            <option value="">All Listings</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="pending_payment">Pending Payment</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Title</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Featured</th><th>Date</th><th>Actions</th>
+                            </tr></thead>
+                            <tbody id="admin-listings-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="admin-listings-empty" class="admin-empty" style="display:none">No listings found.</div>
+                </div>
+
+                <!-- Featured Listings -->
+                <div class="admin-panel" data-admin-panel="featured">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-star"></i> Featured Listings</h2>
+                    </div>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Title</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Date</th><th>Actions</th>
+                            </tr></thead>
+                            <tbody id="admin-featured-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="admin-featured-empty" class="admin-empty" style="display:none">No featured listings.</div>
+                </div>
+
+                <!-- Pending Approvals -->
+                <div class="admin-panel" data-admin-panel="pending">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-clock"></i> Pending Approvals</h2>
+                    </div>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Vehicle</th><th>Seller</th><th>Category</th><th>Price</th><th>Submitted</th><th>Actions</th>
+                            </tr></thead>
+                            <tbody id="admin-pending-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="admin-pending-empty" class="admin-empty" style="display:none">No pending approvals.</div>
+                </div>
+
+                <!-- Revenue -->
+                <div class="admin-panel" data-admin-panel="revenue">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-dollar-sign"></i> Revenue</h2>
+                    </div>
+                    <div class="admin-stats-grid" id="admin-revenue-stats"></div>
+                    <div class="admin-chart-card" style="margin-bottom:24px">
+                        <h3>Revenue Graph</h3>
+                        <div class="admin-chart-bars" id="chart-revenue-full"></div>
+                    </div>
+                    <div class="admin-card">
+                        <h3>Recent Payments</h3>
+                        <div class="admin-table-wrapper">
+                            <table class="admin-table">
+                                <thead><tr>
+                                    <th>User</th><th>Ad ID</th><th>Type</th><th>Amount</th><th>Date</th>
+                                </tr></thead>
+                                <tbody id="admin-payments-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div id="admin-payments-empty" class="admin-empty" style="display:none">No payments yet.</div>
+                    </div>
+                </div>
+
+                <!-- Admins -->
+                <div class="admin-panel" data-admin-panel="admins">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-shield-alt"></i> Admin Management</h2>
+                        <span class="admin-badge admin-badge-info">Read Only</span>
+                    </div>
+                    <p class="admin-muted" style="margin-bottom:16px">Administrators are created manually in the database. This page is read-only.</p>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead><tr>
+                                <th>Name</th><th>Email</th><th>Permissions</th><th>Last Login</th><th>Created</th><th>Role</th>
+                            </tr></thead>
+                            <tbody id="admin-admins-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="admin-admins-empty" class="admin-empty" style="display:none">No administrators found.</div>
+                </div>
+
+                <!-- Settings -->
+                <div class="admin-panel" data-admin-panel="settings">
+                    <div class="admin-panel-header">
+                        <h2><i class="fas fa-cog"></i> Settings</h2>
+                    </div>
+                    <div class="admin-settings-grid">
+                        <div class="admin-card">
+                            <h3>Admin Profile</h3>
+                            <div id="admin-profile-info" class="admin-profile-info"></div>
+                        </div>
+                        <div class="admin-card">
+                            <h3>Change Password</h3>
+                            <form id="admin-change-password-form" onsubmit="return false;">
+                                <div class="admin-form-group">
+                                    <label>Current Password</label>
+                                    <input type="password" id="admin-current-pw" class="admin-input" required>
+                                </div>
+                                <div class="admin-form-group">
+                                    <label>New Password</label>
+                                    <input type="password" id="admin-new-pw" class="admin-input" required minlength="8">
+                                </div>
+                                <div class="admin-form-group">
+                                    <label>Confirm New Password</label>
+                                    <input type="password" id="admin-confirm-pw" class="admin-input" required minlength="8">
+                                </div>
+                                <button type="submit" class="admin-btn admin-btn-primary" onclick="adminChangePassword()">Update Password</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h3>Actions</h3>
+                            <button class="admin-btn admin-btn-danger" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 

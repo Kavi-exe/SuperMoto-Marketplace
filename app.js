@@ -195,17 +195,22 @@ function updateAuthUI() {
     const logoutBtn = document.getElementById("nav-logout-btn");
     const profileLink = document.getElementById("nav-profile-link");
     const postBtn = document.getElementById("nav-post-ad-btn");
+    const adminLink = document.getElementById("nav-admin-link");
 
     if (currentUser) {
         if (loginLink) loginLink.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "inline-flex";
         if (profileLink) profileLink.style.display = "";
         if (postBtn) postBtn.style.display = "";
+        if (adminLink) {
+            adminLink.style.display = currentUser.role === "admin" ? "" : "none";
+        }
     } else {
         if (loginLink) loginLink.style.display = "";
         if (logoutBtn) logoutBtn.style.display = "none";
         if (profileLink) profileLink.style.display = "";
         if (postBtn) postBtn.style.display = "";
+        if (adminLink) adminLink.style.display = "none";
     }
 }
 
@@ -680,9 +685,28 @@ function bindEvents() {
         link.addEventListener("click", (e) => {
             e.preventDefault();
             const view = link.getAttribute("data-target-view");
+            if (view === "admin" && (!currentUser || currentUser.role !== "admin")) {
+                showToast("Admin access required", "error");
+                return;
+            }
             if (!requireAuthForView(view)) return;
             switchView(view);
         });
+    });
+
+    // Admin nav links
+    document.querySelectorAll("[data-admin-view]").forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            const adminView = link.getAttribute("data-admin-view");
+            openAdminPanel(adminView);
+        });
+    });
+
+    // Admin logout
+    document.getElementById("admin-logout-link").addEventListener("click", (e) => {
+        e.preventDefault();
+        adminLogout();
     });
 
     // Mobile navigation toggle
@@ -1245,6 +1269,12 @@ function initParticleCanvas() {
 function switchView(viewName) {
     setMobileNavOpen(false);
 
+    if (viewName && viewName.startsWith("admin-")) {
+        const adminView = viewName.replace("admin-", "");
+        openAdminPanel(adminView);
+        return;
+    }
+
     // Update active nav links
     document.querySelectorAll("[data-target-view]").forEach(link => {
         if (link.getAttribute("data-target-view") === viewName) {
@@ -1262,10 +1292,12 @@ function switchView(viewName) {
     const profileSection = document.getElementById("profile-section");
     const loginSection = document.getElementById("login-section");
     const announcementsSection = document.getElementById("announcements-section");
+    const adminSection = document.getElementById("admin-section");
 
-    [postAdSection, sparePartsSection, infoSection, profileSection, loginSection, announcementsSection].forEach(el => {
+    [postAdSection, sparePartsSection, infoSection, profileSection, loginSection, announcementsSection, adminSection].forEach(el => {
         if (el) el.classList.remove("active");
     });
+    if (homeLayout) homeLayout.style.display = "none";
 
     if (viewName === "home") {
         homeLayout.style.display = "block";
@@ -1288,12 +1320,10 @@ function switchView(viewName) {
         });
         renderListings();
     } else if (viewName === "post-ad") {
-        homeLayout.style.display = "none";
         postAdSection.classList.add("active");
         resetPostForm();
         prefillPostAdFormFromProfile();
     } else if (viewName === "spare-parts") {
-        homeLayout.style.display = "none";
         sparePartsSection.classList.add("active");
         prefillSparePartsFormFromProfile();
         renderSparePartsList();
@@ -1301,22 +1331,21 @@ function switchView(viewName) {
         homeLayout.style.display = "block";
         renderFavorites();
     } else if (viewName === "profile") {
-        homeLayout.style.display = "none";
         profileSection.classList.add("active");
         renderProfileView();
     } else if (viewName === "info") {
-        homeLayout.style.display = "none";
         infoSection.classList.add("active");
     } else if (viewName === "login") {
-        homeLayout.style.display = "none";
         if (loginSection) loginSection.classList.add("active");
         // default to sign-in tab
         switchLoginTab("signin");
         const err = document.getElementById("login-error");
         if (err) err.textContent = "";
     } else if (viewName === "announcements") {
-        homeLayout.style.display = "none";
         if (announcementsSection) announcementsSection.classList.add("active");
+    } else if (viewName === "admin") {
+        if (adminSection) adminSection.classList.add("active");
+        adminLoadDashboard();
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1422,6 +1451,11 @@ async function handleLogin() {
     setAccessToken(data.accessToken);
     currentUser = data.user;
     updateAuthUI();
+    if (currentUser && currentUser.role === "admin") {
+        pendingRedirectView = null;
+        switchView("admin");
+        return;
+    }
     const dest = pendingRedirectView || "home";
     pendingRedirectView = null;
     switchView(dest);
@@ -3060,6 +3094,405 @@ function initCustomDropdown(dropdownId, onSelectCallback) {
         options[0]?.classList.add("selected");
     }
 }
+
+// ── Admin Panel Functions ───────────────────────────────────────
+function openAdminPanel(viewName) {
+    const adminSection = document.getElementById("admin-section");
+    if (!adminSection) return;
+    adminSection.classList.add("active");
+
+    const allSections = document.getElementById("home-layout-section");
+    if (allSections) allSections.style.display = "none";
+    document.querySelectorAll(".view-section").forEach(s => {
+        if (s.id !== "admin-section") s.classList.remove("active");
+    });
+
+    document.querySelectorAll(".admin-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll("[data-admin-view]").forEach(l => l.classList.remove("active"));
+
+    const panel = document.querySelector(`[data-admin-panel="${viewName}"]`);
+    if (panel) panel.classList.add("active");
+    const navLink = document.querySelector(`[data-admin-view="${viewName}"]`);
+    if (navLink) navLink.classList.add("active");
+
+    switch (viewName) {
+        case "dashboard": adminLoadDashboard(); break;
+        case "users": adminLoadUsers(); break;
+        case "listings": adminLoadListings(); break;
+        case "featured": adminLoadFeatured(); break;
+        case "pending": adminLoadPending(); break;
+        case "revenue": adminLoadRevenue(); break;
+        case "admins": adminLoadAdmins(); break;
+        case "settings": adminLoadSettings(); break;
+    }
+
+    window.scrollTo({ top: 0 });
+}
+
+async function adminFetch(path, options = {}) {
+    const { response, data } = await apiFetch(path, options);
+    if (!response.ok) {
+        if (response.status === 403) {
+            showToast("Admin access required", "error");
+            switchView("home");
+            return null;
+        }
+        showToast(data?.error || "Request failed", "error");
+        return null;
+    }
+    return data;
+}
+
+async function adminLoadDashboard() {
+    const data = await adminFetch("/api/admin/dashboard");
+    if (!data) return;
+
+    const dateEl = document.getElementById("admin-dashboard-date");
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+    const stats = data.stats;
+    document.getElementById("admin-dashboard-stats").innerHTML = `
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="fas fa-dollar-sign"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.totalRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">Total Revenue</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6"><i class="fas fa-users"></i></div><div class="admin-stat-info"><span class="admin-stat-value">${stats.totalUsers}</span><span class="admin-stat-label">Total Users</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(168,85,247,0.15);color:#a855f7"><i class="fas fa-ad"></i></div><div class="admin-stat-info"><span class="admin-stat-value">${stats.totalAds}</span><span class="admin-stat-label">Total Ads Posted</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(14,165,233,0.15);color:#0ea5e9"><i class="fas fa-check-circle"></i></div><div class="admin-stat-info"><span class="admin-stat-value">${stats.activeListings}</span><span class="admin-stat-label">Active Listings</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b"><i class="fas fa-star"></i></div><div class="admin-stat-info"><span class="admin-stat-value">${stats.featuredListings}</span><span class="admin-stat-label">Featured Listings</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><i class="fas fa-clock"></i></div><div class="admin-stat-info"><span class="admin-stat-value">${stats.pendingApprovals}</span><span class="admin-stat-label">Pending Approvals</span></div></div>
+    `;
+
+    renderChartBars("chart-revenue", data.revenueData, true);
+    renderChartBars("chart-users", data.userData);
+    renderChartBars("chart-ads", data.adData);
+
+    const activitiesEl = document.getElementById("admin-recent-activities");
+    if (data.activities && data.activities.length > 0) {
+        activitiesEl.innerHTML = data.activities.map(a => `
+            <div class="admin-activity-item">
+                <div class="admin-activity-dot"></div>
+                <div class="admin-activity-content">
+                    <span class="admin-activity-action">${a.action}</span>
+                    <span class="admin-activity-desc">${a.description || ''}</span>
+                    <span class="admin-activity-time">${new Date(a.created_at).toLocaleString()}</span>
+                </div>
+            </div>
+        `).join("");
+    } else {
+        activitiesEl.innerHTML = '<p class="admin-muted">No recent activities.</p>';
+    }
+}
+
+function renderChartBars(containerId, data, isCurrency = false) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const entries = Object.entries(data || {});
+    if (entries.length === 0) {
+        container.innerHTML = '<p class="admin-muted">No data available.</p>';
+        return;
+    }
+    const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+    container.innerHTML = entries.slice(-12).map(([key, val]) => {
+        const pct = (val / maxVal) * 100;
+        const label = isCurrency ? `LKR ${(val / 100).toLocaleString("en-LK")}` : val;
+        return `<div class="chart-bar-item" title="${key}: ${label}"><div class="chart-bar-label">${key.slice(5)}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="height:${Math.max(pct, 2)}%"></div></div><div class="chart-bar-value">${label}</div></div>`;
+    }).join("");
+}
+
+async function adminLoadUsers() {
+    const search = document.getElementById("admin-users-search")?.value || "";
+    const filter = document.getElementById("admin-users-filter")?.value || "";
+    const sort = document.getElementById("admin-users-sort")?.value || "";
+    const data = await adminFetch(`/api/admin/users?search=${encodeURIComponent(search)}&filter=${encodeURIComponent(filter)}&sort=${encodeURIComponent(sort)}`);
+    if (!data) return;
+
+    const tbody = document.getElementById("admin-users-tbody");
+    const empty = document.getElementById("admin-users-empty");
+    if (!data.users || data.users.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.users.map(u => `
+        <tr>
+            <td><strong>${escapeHtml(u.name)}</strong></td>
+            <td>${escapeHtml(u.email)}</td>
+            <td><span class="admin-badge ${u.role === 'admin' ? 'admin-badge-primary' : 'admin-badge-secondary'}">${u.role}</span></td>
+            <td><span class="admin-badge ${u.status === 'active' ? 'admin-badge-success' : 'admin-badge-danger'}">${u.status}</span></td>
+            <td>${u.totalAds || 0}</td>
+            <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+            <td>${u.last_login ? new Date(u.last_login).toLocaleDateString() : '-'}</td>
+            <td class="admin-actions-cell">
+                ${u.role !== 'admin' ? `
+                    ${u.status === 'active' ? `<button class="admin-btn-sm admin-btn-warning" onclick="adminDisableUser(${u.id})" title="Disable"><i class="fas fa-pause"></i></button>` : `<button class="admin-btn-sm admin-btn-success" onclick="adminEnableUser(${u.id})" title="Enable"><i class="fas fa-play"></i></button>`}
+                    <button class="admin-btn-sm admin-btn-danger" onclick="adminDeleteUser(${u.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                ` : '<span class="admin-muted">—</span>'}
+            </td>
+        </tr>
+    `).join("");
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function adminDisableUser(userId) {
+    if (!confirm("Disable this user? They will not be able to login.")) return;
+    const data = await adminFetch("/api/admin/user/disable", { method: "POST", body: JSON.stringify({ userId }) });
+    if (data) { showToast("User disabled", "success"); adminLoadUsers(); }
+}
+
+async function adminEnableUser(userId) {
+    const data = await adminFetch("/api/admin/user/enable", { method: "POST", body: JSON.stringify({ userId }) });
+    if (data) { showToast("User enabled", "success"); adminLoadUsers(); }
+}
+
+async function adminDeleteUser(userId) {
+    if (!confirm("Delete this user permanently? This cannot be undone.")) return;
+    const data = await adminFetch(`/api/admin/user/${userId}`, { method: "DELETE" });
+    if (data) { showToast("User deleted", "success"); adminLoadUsers(); }
+}
+
+async function adminLoadListings() {
+    const search = document.getElementById("admin-listings-search")?.value || "";
+    const filter = document.getElementById("admin-listings-filter")?.value || "";
+    const data = await adminFetch(`/api/admin/listings?search=${encodeURIComponent(search)}&filter=${encodeURIComponent(filter)}`);
+    if (!data) return;
+
+    const tbody = document.getElementById("admin-listings-tbody");
+    const empty = document.getElementById("admin-listings-empty");
+    if (!data.listings || data.listings.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.listings.map(ad => `
+        <tr>
+            <td><strong>${escapeHtml(ad.title)}</strong></td>
+            <td>${escapeHtml(ad.sellerName)}</td>
+            <td><span class="admin-badge admin-badge-info">${ad.type}</span></td>
+            <td>LKR ${(ad.price / 10000000).toFixed(1)}Cr</td>
+            <td><span class="admin-badge ${ad.status === 'active' ? 'admin-badge-success' : ad.status === 'pending' ? 'admin-badge-warning' : 'admin-badge-secondary'}">${ad.status}</span></td>
+            <td>${ad.featured ? '<span class="admin-badge admin-badge-primary"><i class="fas fa-star"></i> Yes</span>' : 'No'}</td>
+            <td>${ad.dateAdded || '-'}</td>
+            <td class="admin-actions-cell">
+                ${ad.status !== 'active' ? `<button class="admin-btn-sm admin-btn-success" onclick="adminApproveListing('${ad.id}')" title="Approve"><i class="fas fa-check"></i></button>` : ''}
+                <button class="admin-btn-sm ${ad.featured ? 'admin-btn-warning' : 'admin-btn-primary'}" onclick="${ad.featured ? `adminUnfeatureListing('${ad.id}')` : `adminFeatureListing('${ad.id}')`}" title="${ad.featured ? 'Unfeature' : 'Feature'}"><i class="fas fa-star"></i></button>
+                <button class="admin-btn-sm admin-btn-danger" onclick="adminDeleteListing('${ad.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function adminApproveListing(adId) {
+    const data = await adminFetch("/api/admin/listing/approve", { method: "POST", body: JSON.stringify({ adId }) });
+    if (data) { showToast("Listing approved", "success"); adminLoadListings(); adminLoadPending(); }
+}
+
+async function adminRejectListing(adId) {
+    if (!confirm("Reject this listing?")) return;
+    const data = await adminFetch("/api/admin/listing/reject", { method: "POST", body: JSON.stringify({ adId }) });
+    if (data) { showToast("Listing rejected", "success"); adminLoadPending(); }
+}
+
+async function adminFeatureListing(adId) {
+    const data = await adminFetch("/api/admin/listing/feature", { method: "POST", body: JSON.stringify({ adId }) });
+    if (data) { showToast("Listing featured", "success"); adminLoadListings(); adminLoadFeatured(); }
+}
+
+async function adminUnfeatureListing(adId) {
+    const data = await adminFetch("/api/admin/listing/unfeature", { method: "POST", body: JSON.stringify({ adId }) });
+    if (data) { showToast("Featured removed", "success"); adminLoadListings(); adminLoadFeatured(); }
+}
+
+async function adminDeleteListing(adId) {
+    if (!confirm("Delete this listing permanently?")) return;
+    const data = await adminFetch(`/api/admin/listing/${adId}`, { method: "DELETE" });
+    if (data) { showToast("Listing deleted", "success"); adminLoadListings(); adminLoadPending(); adminLoadFeatured(); }
+}
+
+async function adminLoadFeatured() {
+    const data = await adminFetch("/api/admin/featured");
+    if (!data) return;
+
+    const tbody = document.getElementById("admin-featured-tbody");
+    const empty = document.getElementById("admin-featured-empty");
+    if (!data.listings || data.listings.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.listings.map(ad => `
+        <tr>
+            <td><strong>${escapeHtml(ad.title)}</strong></td>
+            <td>${escapeHtml(ad.sellerName)}</td>
+            <td><span class="admin-badge admin-badge-info">${ad.type}</span></td>
+            <td>LKR ${(ad.price / 10000000).toFixed(1)}Cr</td>
+            <td><span class="admin-badge ${ad.status === 'active' ? 'admin-badge-success' : 'admin-badge-secondary'}">${ad.status}</span></td>
+            <td>${ad.dateAdded || '-'}</td>
+            <td class="admin-actions-cell">
+                <button class="admin-btn-sm admin-btn-warning" onclick="adminUnfeatureListing('${ad.id}')"><i class="fas fa-star"></i> Remove</button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function adminLoadPending() {
+    const data = await adminFetch("/api/admin/pending");
+    if (!data) return;
+
+    const tbody = document.getElementById("admin-pending-tbody");
+    const empty = document.getElementById("admin-pending-empty");
+    if (!data.listings || data.listings.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.listings.map(ad => `
+        <tr>
+            <td><strong>${escapeHtml(ad.title)}</strong> ${ad.make} ${ad.model}</td>
+            <td>${escapeHtml(ad.sellerName)}</td>
+            <td><span class="admin-badge admin-badge-info">${ad.type}</span></td>
+            <td>LKR ${(ad.price / 10000000).toFixed(1)}Cr</td>
+            <td>${ad.dateAdded || '-'}</td>
+            <td class="admin-actions-cell">
+                <button class="admin-btn-sm admin-btn-success" onclick="adminApproveListing('${ad.id}')"><i class="fas fa-check"></i> Approve</button>
+                <button class="admin-btn-sm admin-btn-danger" onclick="adminRejectListing('${ad.id}')"><i class="fas fa-times"></i> Reject</button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function adminLoadRevenue() {
+    const data = await adminFetch("/api/admin/revenue");
+    if (!data) return;
+
+    const stats = data.stats;
+    document.getElementById("admin-revenue-stats").innerHTML = `
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="fas fa-dollar-sign"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.todayRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">Today</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6"><i class="fas fa-calendar-week"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.weeklyRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">This Week</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(168,85,247,0.15);color:#a855f7"><i class="fas fa-calendar-alt"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.monthlyRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">This Month</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b"><i class="fas fa-calendar-year"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.yearlyRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">This Year</span></div></div>
+        <div class="admin-stat-card"><div class="admin-stat-icon" style="background:rgba(14,165,233,0.15);color:#0ea5e9"><i class="fas fa-chart-line"></i></div><div class="admin-stat-info"><span class="admin-stat-value">LKR ${(stats.lifetimeRevenue / 100).toLocaleString("en-LK")}</span><span class="admin-stat-label">Lifetime</span></div></div>
+    `;
+
+    renderChartBars("chart-revenue-full", data.revenueData, true);
+
+    const tbody = document.getElementById("admin-payments-tbody");
+    const empty = document.getElementById("admin-payments-empty");
+    if (!data.payments || data.payments.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.payments.map(p => `
+        <tr>
+            <td>${p.user_name ? escapeHtml(p.user_name) : 'Anonymous'}</td>
+            <td>${p.ad_id ? escapeHtml(p.ad_id) : '-'}</td>
+            <td><span class="admin-badge admin-badge-info">${p.type}</span></td>
+            <td>LKR ${(p.amount / 100).toLocaleString("en-LK")}</td>
+            <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
+        </tr>
+    `).join("");
+}
+
+async function adminLoadAdmins() {
+    const data = await adminFetch("/api/admin/admins");
+    if (!data) return;
+
+    const tbody = document.getElementById("admin-admins-tbody");
+    const empty = document.getElementById("admin-admins-empty");
+    if (!data.admins || data.admins.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+    }
+    empty.style.display = "none";
+    tbody.innerHTML = data.admins.map(a => `
+        <tr>
+            <td><strong>${escapeHtml(a.full_name)}</strong></td>
+            <td>${escapeHtml(a.email)}</td>
+            <td><span class="admin-badge admin-badge-primary">${a.permissions}</span></td>
+            <td>${a.last_login ? new Date(a.last_login).toLocaleString() : '-'}</td>
+            <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : '-'}</td>
+            <td><span class="admin-badge admin-badge-primary">admin</span></td>
+        </tr>
+    `).join("");
+}
+
+function adminLoadSettings() {
+    if (!currentUser) return;
+    document.getElementById("admin-profile-info").innerHTML = `
+        <p><strong>Name:</strong> ${escapeHtml(currentUser.name || currentUser.email)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(currentUser.email)}</p>
+        <p><strong>Role:</strong> <span class="admin-badge admin-badge-primary">admin</span></p>
+    `;
+}
+
+async function adminChangePassword() {
+    const currentPw = document.getElementById("admin-current-pw")?.value;
+    const newPw = document.getElementById("admin-new-pw")?.value;
+    const confirmPw = document.getElementById("admin-confirm-pw")?.value;
+
+    if (!currentPw || !newPw || !confirmPw) {
+        showToast("All password fields are required", "error");
+        return;
+    }
+    if (newPw.length < 8) {
+        showToast("New password must be at least 8 characters", "error");
+        return;
+    }
+    if (newPw !== confirmPw) {
+        showToast("Passwords do not match", "error");
+        return;
+    }
+
+    const { response, data } = await apiFetch("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+    });
+
+    if (!response.ok) {
+        showToast(data?.error || "Failed to change password", "error");
+        return;
+    }
+
+    showToast("Password changed successfully", "success");
+    document.getElementById("admin-current-pw").value = "";
+    document.getElementById("admin-new-pw").value = "";
+    document.getElementById("admin-confirm-pw").value = "";
+}
+
+async function adminLogout() {
+    await handleLogout();
+}
+
+// Global admin functions
+window.adminLoadDashboard = adminLoadDashboard;
+window.adminLoadUsers = adminLoadUsers;
+window.adminDisableUser = adminDisableUser;
+window.adminEnableUser = adminEnableUser;
+window.adminDeleteUser = adminDeleteUser;
+window.adminLoadListings = adminLoadListings;
+window.adminLoadFeatured = adminLoadFeatured;
+window.adminLoadPending = adminLoadPending;
+window.adminLoadRevenue = adminLoadRevenue;
+window.adminLoadAdmins = adminLoadAdmins;
+window.adminLoadSettings = adminLoadSettings;
+window.adminChangePassword = adminChangePassword;
+window.adminLogout = adminLogout;
+window.adminApproveListing = adminApproveListing;
+window.adminRejectListing = adminRejectListing;
+window.adminFeatureListing = adminFeatureListing;
+window.adminUnfeatureListing = adminUnfeatureListing;
+window.adminDeleteListing = adminDeleteListing;
+window.openAdminPanel = openAdminPanel;
 
 // Global functions attached to window for inline onclick execution
 window.filterBySidebar = filterBySidebar;

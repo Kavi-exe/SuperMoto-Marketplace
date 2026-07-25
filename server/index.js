@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 
 const {
   openDb,
+  run,
   initSchema,
   getUserByEmail,
   getUserById,
@@ -40,6 +41,27 @@ const {
   createSparePart,
   deleteSparePart,
   seedPreloadedAds,
+  // Admin functions
+  getAllUsers,
+  getUserAdCount,
+  updateUserStatus,
+  deleteUserById,
+  getAllAds,
+  updateAdFeatured,
+  getFeaturedAds,
+  getPendingAds,
+  logActivity,
+  getRecentActivities,
+  createPayment,
+  getRevenueStats,
+  getMonthlyRevenueData,
+  getMonthlyUserData,
+  getMonthlyAdData,
+  getRecentPayments,
+  getDashboardStats,
+  getAllAdmins,
+  updateUserLastLogin,
+  updateAdminLastLogin,
 } = require('./database');
 
 const {
@@ -47,6 +69,7 @@ const {
   signRefreshToken,
   verifyRefreshToken,
   requireAuth,
+  requireAdmin,
   REFRESH_EXPIRY_MS,
 } = require('./middleware/auth');
 
@@ -636,6 +659,13 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     db.close();
     resetLoginAttempts(req);
     const accessToken = await issueTokens(res, user);
+    const logDb = openDb();
+    await updateUserLastLogin(logDb, user.id);
+    if (user.role === 'admin') {
+      await updateAdminLastLogin(logDb, user.id);
+      await logActivity(logDb, user.id, 'admin_login', `Admin ${user.email} logged in`);
+    }
+    logDb.close();
     return res.json({ ok: true, user: publicUser(user), accessToken });
   } catch {
     return res.status(500).json({ ok: false, error: 'Server error' });
@@ -677,6 +707,29 @@ app.post('/api/auth/refresh', async (req, res) => {
     const accessToken = await issueTokens(res, user);
     return res.json({ ok: true, accessToken, user: publicUser(user) });
   } catch {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ ok: false, error: 'Current and new password are required' });
+    }
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({ ok: false, error: 'New password must be at least 8 characters' });
+    }
+    const db = openDb();
+    const user = await getUserById(db, req.user.id);
+    if (!user) { db.close(); return res.status(404).json({ ok: false, error: 'User not found' }); }
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) { db.close(); return res.status(401).json({ ok: false, error: 'Current password is incorrect' }); }
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await run(db, 'UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [newHash, new Date().toISOString(), user.id]);
+    db.close();
+    return res.json({ ok: true, message: 'Password changed successfully' });
+  } catch (err) {
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -985,6 +1038,219 @@ app.post('/api/payment/confirm', requireAuth, async (req, res) => {
     return res.json({ ok: true, ad: updatedAd });
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message || 'Payment confirmation error' });
+  }
+});
+
+// ── Admin API Routes ─────────────────────────────────────────────
+app.get('/api/admin/dashboard', requireAdmin, async (_req, res) => {
+  try {
+    const db = openDb();
+    const stats = await getDashboardStats(db);
+    const revenueData = await getMonthlyRevenueData(db);
+    const userData = await getMonthlyUserData(db);
+    const adData = await getMonthlyAdData(db);
+    const activities = await getRecentActivities(db, 10);
+    db.close();
+    return res.json({ ok: true, stats, revenueData, userData, adData, activities });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const db = openDb();
+    const search = req.query.search || '';
+    const sort = req.query.sort || '';
+    const filter = req.query.filter || '';
+    const users = await getAllUsers(db, { search, sort, filter });
+    const usersWithAdCount = await Promise.all(users.map(async (u) => {
+      const adCount = await getUserAdCount(db, u.id);
+      return { ...u, totalAds: adCount };
+    }));
+    db.close();
+    return res.json({ ok: true, users: usersWithAdCount });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/user/disable', requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId) return res.status(400).json({ ok: false, error: 'userId is required' });
+    const db = openDb();
+    await updateUserStatus(db, userId, 'disabled');
+    await logActivity(db, req.user.id, 'user_disabled', `User ${userId} disabled by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'User disabled' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/user/enable', requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+    if (!userId) return res.status(400).json({ ok: false, error: 'userId is required' });
+    const db = openDb();
+    await updateUserStatus(db, userId, 'active');
+    await logActivity(db, req.user.id, 'user_enabled', `User ${userId} enabled by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'User enabled' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/user/:id', requireAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const db = openDb();
+    await deleteUserById(db, userId);
+    await logActivity(db, req.user.id, 'user_deleted', `User ${userId} deleted by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'User deleted' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/listings', requireAdmin, async (req, res) => {
+  try {
+    const db = openDb();
+    const search = req.query.search || '';
+    const filter = req.query.filter || '';
+    const listings = await getAllAds(db, { search, filter });
+    db.close();
+    return res.json({ ok: true, listings });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/listing/approve', requireAdmin, async (req, res) => {
+  try {
+    const { adId } = req.body || {};
+    if (!adId) return res.status(400).json({ ok: false, error: 'adId is required' });
+    const db = openDb();
+    const ad = await getAdById(db, adId);
+    if (!ad) { db.close(); return res.status(404).json({ ok: false, error: 'Ad not found' }); }
+    await updateAdStatus(db, adId, 'active');
+    await logActivity(db, req.user.id, 'ad_approved', `Ad ${adId} approved by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'Listing approved' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/listing/reject', requireAdmin, async (req, res) => {
+  try {
+    const { adId } = req.body || {};
+    if (!adId) return res.status(400).json({ ok: false, error: 'adId is required' });
+    const db = openDb();
+    const ad = await getAdById(db, adId);
+    if (!ad) { db.close(); return res.status(404).json({ ok: false, error: 'Ad not found' }); }
+    await updateAdStatus(db, adId, 'rejected');
+    await logActivity(db, req.user.id, 'ad_rejected', `Ad ${adId} rejected by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'Listing rejected' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/listing/feature', requireAdmin, async (req, res) => {
+  try {
+    const { adId } = req.body || {};
+    if (!adId) return res.status(400).json({ ok: false, error: 'adId is required' });
+    const db = openDb();
+    const ad = await getAdById(db, adId);
+    if (!ad) { db.close(); return res.status(404).json({ ok: false, error: 'Ad not found' }); }
+    await updateAdFeatured(db, adId, true);
+    await logActivity(db, req.user.id, 'ad_featured', `Ad ${adId} featured by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'Listing marked as featured' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/admin/listing/unfeature', requireAdmin, async (req, res) => {
+  try {
+    const { adId } = req.body || {};
+    if (!adId) return res.status(400).json({ ok: false, error: 'adId is required' });
+    const db = openDb();
+    const ad = await getAdById(db, adId);
+    if (!ad) { db.close(); return res.status(404).json({ ok: false, error: 'Ad not found' }); }
+    await updateAdFeatured(db, adId, false);
+    await logActivity(db, req.user.id, 'ad_unfeatured', `Ad ${adId} unfeatured by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'Featured removed' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.delete('/api/admin/listing/:id', requireAdmin, async (req, res) => {
+  try {
+    const adId = req.params.id;
+    const db = openDb();
+    const ad = await getAdById(db, adId);
+    if (!ad) { db.close(); return res.status(404).json({ ok: false, error: 'Ad not found' }); }
+    await deleteAd(db, adId);
+    await logActivity(db, req.user.id, 'ad_deleted', `Ad ${adId} deleted by admin ${req.user.email}`);
+    db.close();
+    return res.json({ ok: true, message: 'Listing deleted' });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/pending', requireAdmin, async (_req, res) => {
+  try {
+    const db = openDb();
+    const listings = await getPendingAds(db);
+    db.close();
+    return res.json({ ok: true, listings });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/featured', requireAdmin, async (_req, res) => {
+  try {
+    const db = openDb();
+    const listings = await getFeaturedAds(db);
+    db.close();
+    return res.json({ ok: true, listings });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/revenue', requireAdmin, async (_req, res) => {
+  try {
+    const db = openDb();
+    const stats = await getRevenueStats(db);
+    const payments = await getRecentPayments(db, 50);
+    const revenueData = await getMonthlyRevenueData(db);
+    db.close();
+    return res.json({ ok: true, stats, payments, revenueData });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/admins', requireAdmin, async (_req, res) => {
+  try {
+    const db = openDb();
+    const admins = await getAllAdmins(db);
+    db.close();
+    return res.json({ ok: true, admins });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
 

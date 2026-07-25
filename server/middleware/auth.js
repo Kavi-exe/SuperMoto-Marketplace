@@ -43,6 +43,26 @@ function requireAuth(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const payload = verifyAccessToken(token);
+    if (payload.role !== 'admin') {
+      return res.status(403).json({ ok: false, error: 'Forbidden: Admin access required' });
+    }
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
+    return next();
+  } catch {
+    return res.status(401).json({ ok: false, error: 'Invalid or expired token' });
+  }
+}
+
 function optionalAuth(req, _res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -68,5 +88,6 @@ module.exports = {
   verifyAccessToken,
   verifyRefreshToken,
   requireAuth,
+  requireAdmin,
   optionalAuth,
 };
