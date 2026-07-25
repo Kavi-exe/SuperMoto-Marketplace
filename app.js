@@ -1269,6 +1269,12 @@ function initParticleCanvas() {
 function switchView(viewName) {
     setMobileNavOpen(false);
 
+    // Show/hide footer based on view
+    const footer = document.querySelector(".main-footer");
+    if (footer) {
+        footer.style.display = viewName === "admin" ? "none" : "";
+    }
+
     if (viewName && viewName.startsWith("admin-")) {
         const adminView = viewName.replace("admin-", "");
         openAdminPanel(adminView);
