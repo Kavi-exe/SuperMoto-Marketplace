@@ -8,45 +8,39 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-  const {
-    openDb,
-    initSchema,
-    getUserByEmail,
-    getUserById,
-    createUser,
-    updateUser,
-    saveRefreshToken,
-    getRefreshToken,
-    deleteRefreshToken,
-    deleteUserRefreshTokens,
-    markUserEmailVerified,
-    updateUnverifiedUserCredentials,
-    createEmailVerificationOtp,
-    getLatestUnexpiredOtpForUserEmail,
-    markOtpAsUsed,
-    incrementVerificationFailedAttempts,
-    resetVerificationFailedAttempts,
-    lockVerificationAttempts,
-    isVerificationLocked,
-    recordResendAttempt,
-    getResendAttemptsInWindow,
-    cleanupOldResendAttempts,
-    getAllActiveAds,
-    getAdById,
-    createAd,
-    updateAdStatus,
-    deleteAd,
-    getAllSpareParts,
-    getSparePartById,
-    createSparePart,
-    deleteSparePart,
-    seedPreloadedAds,
-    getAdmins,
-    getAdminByUserId,
-    createAdminRecord,
-    updateAdminLastLogin,
-    deleteAdminRecord,
-  } = require('./database');
+const {
+  openDb,
+  initSchema,
+  getUserByEmail,
+  getUserById,
+  createUser,
+  saveRefreshToken,
+  getRefreshToken,
+  deleteRefreshToken,
+  deleteUserRefreshTokens,
+  markUserEmailVerified,
+  updateUnverifiedUserCredentials,
+  createEmailVerificationOtp,
+  getLatestUnexpiredOtpForUserEmail,
+  markOtpAsUsed,
+  incrementVerificationFailedAttempts,
+  resetVerificationFailedAttempts,
+  lockVerificationAttempts,
+  isVerificationLocked,
+  recordResendAttempt,
+  getResendAttemptsInWindow,
+  cleanupOldResendAttempts,
+  getAllActiveAds,
+  getAdById,
+  createAd,
+  updateAdStatus,
+  deleteAd,
+  getAllSpareParts,
+  getSparePartById,
+  createSparePart,
+  deleteSparePart,
+  seedPreloadedAds,
+} = require('./database');
 
 const {
   signAccessToken,
@@ -57,7 +51,6 @@ const {
 } = require('./middleware/auth');
 
 const { loginRateLimiter, otpVerifyRateLimiter, resetLoginAttempts } = require('./middleware/rateLimit');
-const { requireAdmin } = require('./middleware/admin');
 const { createUploadMiddleware, isCloudinaryConfigured, uploadFilesToCloudinary } = require('./config/cloudinary');
 const { sendVerificationEmail, isEmailConfigured } = require('./config/email');
 const PRELOADED_ADS = require('./seed-data');
@@ -148,7 +141,6 @@ async function issueTokens(res, user) {
   const db = openDb();
   await deleteUserRefreshTokens(db, user.id);
   await saveRefreshToken(db, user.id, hashToken(refreshToken), expiresAt);
-  await updateUser(db, user.id, { last_login: new Date().toISOString() });
   db.close();
 
   setRefreshCookie(res, refreshToken);
@@ -230,397 +222,6 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 app.post('/api/auth/register', registerUser);
 app.post('/api/auth/signup', registerUser);
 app.post('/api/auth/verify-registration', otpVerifyRateLimiter, verifyRegistrationOtp);
-
-// ── ADMIN ENDPOINTS ─────────────────────────────────────────────────────
-
-// Dashboard
-app.get('/admin/dashboard', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-
-    // Statistics
-    const [totalRevenueRows, totalUsersRows, activeAdsRows, pendingAdsRows, featuredAdsRows] = await Promise.all([
-      all(db, "SELECT SUM(CASE WHEN status = 'active' THEN price ELSE 0 END) as revenue FROM ads"),
-      all(db, "SELECT COUNT(*) as count FROM users WHERE status = 'active'"),
-      all(db, "SELECT COUNT(*) as count FROM ads WHERE status = 'active' AND featured = 1"),
-      all(db, "SELECT COUNT(*) as count FROM ads WHERE status = 'pending_payment' OR status = 'pending'"),
-      all(db, "SELECT COUNT(*) as count FROM ads WHERE featured = 1 AND status = 'active'"),
-    ]);
-
-    db.close();
-
-    const dashboardStats = {
-      totalRevenue: totalRevenueRows[0]?.revenue || 0,
-      totalUsers: totalUsersRows[0]?.count || 0,
-      activeAds: activeAdsRows[0]?.count || 0,
-      pendingAds: pendingAdsRows[0]?.count || 0,
-      featuredAds: featuredAdsRows[0]?.count || 0,
-    };
-
-    return res.json({ ok: true, stats: dashboardStats });
-  } catch (err) {
-    console.error('[admin-dashboard]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Users Management
-app.get('/admin/users', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const rows = await all(db, 'SELECT * FROM users WHERE role = ?', ['user']);
-    db.close();
-
-    const users = rows.map((row) => ({...
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      role: row.role,
-      email_verified: row.email_verified,
-      status: row.status || 'active',
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      last_login: row.last_login,
-    }));
-
-    return res.json({ ok: true, users });
-  } catch (err) {
-    console.error('[admin-users]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/user/disable', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { userId } = req.body || {};
-    if (!userId) {
-      return res.status(400).json({ ok: false, error: 'User ID is required' });
-    }
-
-    const db = openDb();
-    await updateUser(db, userId, { status: 'disabled' });
-    db.close();
-
-    return res.json({ ok: true, message: 'User disabled successfully' });
-  } catch (err) {
-    console.error('[admin-user-disable]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/user/enable', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { userId } = req.body || {};
-    if (!userId) {
-      return res.status(400).json({ ok: false, error: 'User ID is required' });
-    }
-
-    const db = openDb();
-    await updateUser(db, userId, { status: 'active' });
-    db.close();
-
-    return res.json({ ok: true, message: 'User enabled successfully' });
-  } catch (err) {
-    console.error('[admin-user-enable]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.delete('/admin/user/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    await deleteUserRefreshTokens(db, req.params.id);
-    await run(db, 'DELETE FROM users WHERE id = ?', [req.params.id]);
-    db.close();
-
-    return res.json({ ok: true, message: 'User deleted successfully' });
-  } catch (err) {
-    console.error('[admin-user-delete]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Listings Management
-app.get('/admin/listings', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const rows = await all(db, 'SELECT * FROM ads ORDER BY date_added DESC');
-    db.close();
-
-    const listings = rows.map((row) => ({...
-      id: row.id,
-      title: row.title,
-      type: row.type,
-      make: row.make,
-      model: row.model,
-      year: row.year,
-      price: row.price,
-      location: row.location,
-      status: row.status,
-      featured: Boolean(row.featured),
-      date_added: row.date_added,
-      publisher_id: row.publisher_id,
-    }));
-
-    return res.json({ ok: true, listings });
-  } catch (err) {
-    console.error('[admin-listings]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/listing/approve', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { adId } = req.body || {};
-    if (!adId) {
-      return res.status(400).json({ ok: false, error: 'Ad ID is required' });
-    }
-
-    const db = openDb();
-    await updateAdStatus(db, adId, 'active');
-    await run(db, 'UPDATE ads SET status = ? WHERE id = ?', ['active', adId]);
-    db.close();
-
-    return res.json({ ok: true, message: 'Listing approved successfully' });
-  } catch (err) {
-    console.error('[admin-listing-approve]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/listing/reject', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { adId } = req.body || {};
-    if (!adId) {
-      return res.status(400).json({ ok: false, error: 'Ad ID is required' });
-    }
-
-    const db = openDb();
-    await run(db, 'UPDATE ads SET status = ? WHERE id = ?', ['rejected', adId]);
-    db.close();
-
-    return res.json({ ok: true, message: 'Listing rejected successfully' });
-  } catch (err) {
-    console.error('[admin-listing-reject]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.delete('/admin/listing/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    await deleteAd(db, req.params.id);
-    db.close();
-
-    return res.json({ ok: true, message: 'Listing deleted successfully' });
-  } catch (err) {
-    console.error('[admin-listing-delete]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/listing/feature', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { adId } = req.body || {};
-    if (!adId) {
-      return res.status(400).json({ ok: false, error: 'Ad ID is required' });
-    }
-
-    const db = openDb();
-    await run(db, 'UPDATE ads SET featured = 1 WHERE id = ?', [adId]);
-    db.close();
-
-    return res.json({ ok: true, message: 'Listing featured successfully' });
-  } catch (err) {
-    console.error('[admin-listing-feature]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/listing/unfeature', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { adId } = req.body || {};
-    if (!adId) {
-      return res.status(400).json({ ok: false, error: 'Ad ID is required' });
-    }
-
-    const db = openDb();
-    await run(db, 'UPDATE ads SET featured = 0 WHERE id = ?', [adId]);
-    db.close();
-
-    return res.json({ ok: true, message: 'Featured removed successfully' });
-  } catch (err) {
-    console.error('[admin-listing-unfeature]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Pending Approvals
-app.get('/admin/pending', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const rows = await all(db, "SELECT * FROM ads WHERE status = 'pending_payment' OR status = 'pending'");
-    db.close();
-
-    const pending = rows.map((row) => ({...
-      id: row.id,
-      title: row.title,
-      type: row.type,
-      make: row.make,
-      model: row.model,
-      year: row.year,
-      price: row.price,
-      location: row.location,
-      date_added: row.date_added,
-      publisher_id: row.publisher_id,
-    }));
-
-    return res.json({ ok: true, pending });
-  } catch (err) {
-    console.error('[admin-pending]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Featured Listings
-app.get('/admin/featured', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const rows = await all(db, "SELECT a.*, u.name as seller_name, u.email as seller_email FROM ads a JOIN users u ON a.publisher_id = u.id WHERE a.featured = 1 AND a.status = 'active' ORDER BY a.date_added DESC");
-    db.close();
-
-    const featured = rows.map((row) => ({...
-      id: row.id,
-      title: row.title,
-      type: row.type,
-      make: row.make,
-      model: row.model,
-      year: row.year,
-      price: row.price,
-      location: row.location,
-      date_added: row.date_added,
-      seller_name: row.seller_name,
-      seller_email: row.seller_email,
-      publisher_id: row.publisher_id,
-    }));
-
-    return res.json({ ok: true, featured });
-  } catch (err) {
-    console.error('[admin-featured]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Revenue Page
-app.get('/admin/revenue', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).toISOString().split('T')[0];
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-
-    const [todayRevenueRows, weeklyRevenueRows, monthlyRevenueRows, yearlyRevenueRows, lifetimeRevenueRows] = await Promise.all([
-      all(db, "SELECT SUM(price) as revenue FROM ads WHERE date_added = ? AND status = 'active'", [today]),
-      all(db, "SELECT SUM(price) as revenue FROM ads WHERE date_added >= ? AND status = 'active'", [startOfWeek]),
-      all(db, "SELECT SUM(price) as revenue FROM ads WHERE date_added >= ? AND status = 'active'", [startOfMonth]),
-      all(db, "SELECT SUM(price) as revenue FROM ads WHERE date_added >= ? AND status = 'active'", [startOfYear]),
-      all(db, "SELECT SUM(price) as revenue FROM ads WHERE status = 'active'"),
-    ]);
-
-    const recentPayments = await all(db, "SELECT a.id, a.title, a.price, a.date_added, u.name as seller_name FROM ads a JOIN users u ON a.publisher_id = u.id WHERE a.status = 'active' ORDER BY a.date_added DESC LIMIT 10");
-
-    db.close();
-
-    const revenueStats = {
-      today: todayRevenueRows[0]?.revenue || 0,
-      weekly: weeklyRevenueRows[0]?.revenue || 0,
-      monthly: monthlyRevenueRows[0]?.revenue || 0,
-      yearly: yearlyRevenueRows[0]?.revenue || 0,
-      lifetime: lifetimeRevenueRows[0]?.revenue || 0,
-    };
-
-    return res.json({ ok: true, revenue: revenueStats, recentPayments });
-  } catch (err) {
-    console.error('[admin-revenue]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Admins Management
-app.get('/admin/admins', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const db = openDb();
-    const admins = await getAdmins(db);
-    db.close();
-
-    return res.json({ ok: true, admins });
-  } catch (err) {
-    console.error('[admin-admins]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-// Settings
-app.get('/admin/settings', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const profile = {
-      name: 'Admin User',
-      email: 'admin@ceylonsuperhub.com',
-      avatar: '',
-      permissions: {
-        users: 'read',
-        listings: 'read',
-        payments: 'read',
-        settings: 'read',
-      }
-    };
-
-    return res.json({ ok: true, profile });
-  } catch (err) {
-    console.error('[admin-settings]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/admin/settings/update-profile', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { name, email } = req.body || {};
-    if (!name || !email) {
-      return res.status(400).json({ ok: false, error: 'Name and email are required' });
-    }
-
-    const db = openDb();
-    await updateUser(db, req.user.id, { name, email });
-    db.close();
-
-    return res.json({ ok: true, message: 'Profile updated successfully' });
-  } catch (err) {
-    console.error('[admin-update-profile]', err);
-    return res.status(500).json({ ok: false, error: 'Server error' });
-  }
-});
-
-app.post('/api/auth/logout', requireAuth, async (req, res) => {
-  try {
-    const refreshToken = req.cookies?.ceylon_refresh;
-    if (refreshToken) {
-      const db = openDb();
-      await deleteRefreshToken(db, hashToken(refreshToken));
-      db.close();
-    }
-    clearRefreshCookie(res);
-    return res.json({ ok: true });
-  } catch {
-    clearRefreshCookie(res);
-    return res.json({ ok: true });
-  }
-});
 app.post('/api/auth/resend-otp', resendOtp);
 
 function createOtpVerificationCodeHash(otpCode) {

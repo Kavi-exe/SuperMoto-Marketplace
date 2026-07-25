@@ -173,35 +173,6 @@ async function migrateSchema(db) {
     await run(db, "ALTER TABLE users ADD COLUMN resend_attempts_in_window INTEGER NOT NULL DEFAULT 0");
   }
 
-  if (!colNames.has('status')) {
-    await run(db, "ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
-  }
-
-  if (!colNames.has('last_login')) {
-    await run(db, "ALTER TABLE users ADD COLUMN last_login TEXT");
-  }
-
-  if (!colNames.has('updated_at')) {
-    await run(db, "ALTER TABLE users ADD COLUMN updated_at TEXT");
-  }
-
-  await run(db, `CREATE TABLE IF NOT EXISTS admins (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    full_name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    permissions TEXT NOT NULL DEFAULT 'limited',
-    created_at TEXT NOT NULL,
-    last_login TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`);
-
-  // Prevent duplicate admin records (one user can only have one admin record)
-  const duplicateCheck = await get(db, "SELECT name FROM sqlite_master WHERE type='index' AND name='unique_admin_per_user'");
-  if (!duplicateCheck) {
-    await run(db, "CREATE UNIQUE INDEX IF NOT EXISTS unique_admin_per_user ON admins(user_id)");
-  }
-
   // Create resend_otp_tracking table if it doesn't exist
   const otpTrackingTableCheck = await get(
     db,
@@ -233,8 +204,8 @@ async function createUser(db, { name, email, passwordHash, emailVerified = 0 }) 
   const createdAt = new Date().toISOString();
   await run(
     db,
-    'INSERT INTO users (name, email, password_hash, role, email_verified, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [name, email, passwordHash, 'user', emailVerified ? 1 : 0, 'active', createdAt]
+    'INSERT INTO users (name, email, password_hash, role, email_verified, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, email, passwordHash, 'user', emailVerified ? 1 : 0, createdAt]
   );
   return getUserByEmail(db, email);
 }
@@ -452,81 +423,6 @@ async function countAds(db) {
   return row ? row.count : 0;
 }
 
-async function updateUser(db, userId, updates) {
-  const setClauses = [];
-  const values = [];
-  for (const [key, value] of Object.entries(updates)) {
-    setClauses.push(`${key} = ?`);
-    values.push(value);
-  }
-  const updatedAt = new Date().toISOString();
-  setClauses.push('updated_at = ?');
-  values.push(updatedAt);
-  values.push(userId);
-  
-  await run(db, `UPDATE users SET ${setClauses.join(', ')} WHERE id = ?`, values);
-}
-
-async function getAdmins(db) {
-  const rows = await all(db, 'SELECT * FROM admins ORDER BY created_at DESC');
-  return rows;
-}
-
-async function getAdminByUserId(db, userId) {
-  return get(db, 'SELECT * FROM admins WHERE user_id = ?', [userId]);
-}
-
-async function createAdminRecord(db, { userId, fullName, email, permissions }) {
-  const createdAt = new Date().toISOString();
-  return run(db, 'INSERT INTO admins (user_id, full_name, email, permissions, created_at) VALUES (?, ?, ?, ?, ?)', 
-    [userId, fullName, email, permissions, createdAt]);
-}
-
-async function updateAdminLastLogin(db, userId) {
-  const lastLogin = new Date().toISOString();
-  await run(db, 'UPDATE admins SET last_login = ? WHERE user_id = ?', [lastLogin, userId]);
-}
-
-async function deleteAdminRecord(db, userId) {
-  await run(db, 'DELETE FROM admins WHERE user_id = ?', [userId]);
-}
-
-async function run(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve(this);
-    });
-  });
-}
-
-async function get(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) return reject(err);
-      resolve(row);
-    });
-  });
-}
-
-async function all(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
-}
-
-async function markUserStatus(db, userId, status) {
-  await run(db, 'UPDATE users SET status = ?, updated_at = ? WHERE id = ?', [status, new Date().toISOString(), userId]);
-}
-
-async function getAllActiveUsers(db) {
-  const rows = await all(db, 'SELECT * FROM users WHERE role = ? AND status = ?', ['user', 'active']);
-  return rows;
-}
-
 async function seedPreloadedAds(db, ads) {
   const count = await countAds(db);
   if (count > 0) return;
@@ -612,7 +508,6 @@ module.exports = {
   getUserByEmail,
   getUserById,
   createUser,
-  updateUser,
   saveRefreshToken,
   getRefreshToken,
   deleteRefreshToken,
@@ -639,9 +534,4 @@ module.exports = {
   createSparePart,
   deleteSparePart,
   seedPreloadedAds,
-  getAdmins,
-  getAdminByUserId,
-  createAdminRecord,
-  updateAdminLastLogin,
-  deleteAdminRecord,
 };
