@@ -1297,6 +1297,7 @@ function switchView(viewName) {
     [postAdSection, sparePartsSection, infoSection, profileSection, loginSection, announcementsSection, adminSection].forEach(el => {
         if (el) el.classList.remove("active");
     });
+    document.body.classList.remove("admin-active");
     if (homeLayout) homeLayout.style.display = "none";
 
     if (viewName === "home") {
@@ -3100,6 +3101,7 @@ function openAdminPanel(viewName) {
     const adminSection = document.getElementById("admin-section");
     if (!adminSection) return;
     adminSection.classList.add("active");
+    document.body.classList.add("admin-active");
 
     const allSections = document.getElementById("home-layout-section");
     if (allSections) allSections.style.display = "none";
