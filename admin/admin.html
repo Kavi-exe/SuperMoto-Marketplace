@@ -1,0 +1,523 @@
+DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - CeylonSuperHub</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body.admin-panel {
+            background: var(--bg-secondary);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-body);
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .admin-sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .admin-sidebar-brand {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            background: var(--accent-gradient);
+        }
+
+        .admin-sidebar-brand h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+
+        .admin-sidebar-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .admin-sidebar-nav li {
+            margin-bottom: 2px;
+        }
+
+        .admin-sidebar-nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .admin-sidebar-nav a:hover, .admin-sidebar-nav a.active {
+            background: rgba(26, 111, 255, 0.1);
+            color: var(--accent-primary);
+            border-left-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .admin-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            min-height: 100vh;
+        }
+
+        .admin-card {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .admin-header {
+            background: var(--bg-card);
+            border-radius: var(--border-radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .admin-btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius-md);
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            background: var(--accent-gradient);
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .admin-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 10px var(--accent-primary-glow);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th, .admin-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .admin-notification.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .admin-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .admin-mobile-toggle {
+                display: block;
+            }
+        }
+
+        .admin-mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body class="admin-panel">
+    <button class="admin-mobile-toggle" id="admin-mobile-toggle" onclick="toggleAdminSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <aside class="admin-sidebar" id="admin-sidebar">
+        <div class="admin-sidebar-brand">
+            <h1>CeylonSuperHub</h1>
+        </div>
+        <nav class="admin-sidebar-nav">
+            <ul>
+                <li><a href="#dashboard" onclick="adminNavigate('dashboard')" class="active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="#users" onclick="adminNavigate('users')">
+                    <i class="fas fa-users"></i> Users</a></li>
+                <li><a href="#listings" onclick="adminNavigate('listings')">
+                    <i class="fas fa-car"></i> Listings</a></li>
+                <li><a href="#featured" onclick="adminNavigate('featured')">
+                    <i class="fas fa-star"></i> Featured</a></li>
+                <li><a href="#pending" onclick="adminNavigate('pending')">
+                    <i class="fas fa-clock"></i> Pending</a></li>
+                <li><a href="#revenue" onclick="adminNavigate('revenue')">
+                    <i class="fas fa-dollar-sign"></i> Revenue</a></li>
+                <li><a href="#admins" onclick="adminNavigate('admins')">
+                    <i class="fas fa-user-shield"></i> Admins</a></li>
+                <li><a href="#settings" onclick="adminNavigate('settings')">
+                    <i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="#" onclick="adminLogout()" class="admin-logout-link">
+                    <i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <main class="admin-content" id="admin-content">
+        <div class="admin-notification" id="admin-notification"></div>
+        
+        <div id="dashboard" class="admin-section active">
+            <div class="admin-header">
+                <h1>Admin Dashboard</h1>
+                <p>Platform overview and statistics</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="admin-card">
+                    <h3>Total Users</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: var(--accent-primary);">0</p>
+                </div>
+                <div class="admin-card">
+                    <h3>Active Listings</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: var(--accent-cyan);">0</p>
+                </div>
+                <div class="admin-card">
+                    <h3>Featured Listings</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: var(--accent-gold);">0</p>
+                </div>
+                <div class="admin-card">
+                    <h3>Pending Approvals</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: var(--accent-red, #ef4444);">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="users" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Users Management</h1>
+                <p>Manage platform users</p>
+            </div>
+            <div class="admin-card">
+                <h3>Users Table (placeholder)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted);">Users will be loaded from API</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="listings" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Listings Management</h1>
+                <p>Manage all vehicle listings</p>
+            </div>
+            <div class="admin-card">
+                <h3>Listings Table (placeholder)</h3>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Title</th><th>Price</th><th>Status</th><th>Date</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted);">Listings will be loaded from API</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="featured" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Featured Listings</h1>
+                <p>Manage featured listings</p>
+            </div>
+            <div class="admin-card">
+                <h3>Featured Listings (placeholder)</h3>
+                <p style="color: var(--text-muted);">Featured listings management interface</p>
+            </div>
+        </div>
+        
+        <div id="pending" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Pending Approvals</h1>
+                <p>Review pending advertisements</p>
+            </div>
+            <div class="admin-card">
+                <h3>Pending Listings (placeholder)</h3>
+                <p style="color: var(--text-muted);">Pending listings for approval</p>
+            </div>
+        </div>
+        
+        <div id="revenue" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Revenue Report</h1>
+                <p>Platform revenue statistics</p>
+            </div>
+            <div class="admin-card">
+                <h3>Revenue Analytics (placeholder)</h3>
+                <p style="color: var(--text-muted);">Revenue reports and statistics</p>
+            </div>
+        </div>
+        
+        <div id="admins" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Admin Management</h1>
+                <p>View all administrators (read-only)</p>
+            </div>
+            <div class="admin-card">
+                <h3>Admin Users (placeholder)</h3>
+                <p style="color: var(--text-muted);">System administrator list</p>
+            </div>
+        </div>
+        
+        <div id="settings" class="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>Settings</h1>
+                <p>Platform configuration</p>
+            </div>
+            <div class="admin-card">
+                <h3>Settings Panel (placeholder)</h3>
+                <p style="color: var(--text-muted);">Platform configuration options</p>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        // Admin panel state
+        let currentUser = null;
+        let currentSection = 'dashboard';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load user data from main app
+            if (window.currentUser) {
+                currentUser = window.currentUser;
+                if (currentUser.role !== 'admin') {
+                    window.location.href = '/';
+                    return;
+                }
+            } else {
+                // Try to get user data from API
+                fetch('/api/auth/me')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok && data.user) {
+                            currentUser = data.user;
+                            if (currentUser.role !== 'admin') {
+                                window.location.href = '/';
+                                return;
+                            }
+                        } else {
+                            redirectToLogin();
+                        }
+                    })
+                    .catch(() => redirectToLogin());
+            }
+            initAdminPanel();
+        });
+        
+        function initAdminPanel() {
+            updateAdminUI();
+            loadSection('dashboard');
+        }
+        
+        function updateAdminUI() {
+            if (currentUser) {
+                document.querySelector('.admin-sidebar-nav').style.display = 'block';
+            } else {
+                document.querySelector('.admin-sidebar-nav').style.display = 'none';
+                redirectToLogin();
+            }
+        }
+        
+        async function loadSection(section) {
+            document.querySelectorAll('.admin-section').forEach(sec => sec.style.display = 'none');
+            document.querySelectorAll('.admin-sidebar-nav a').forEach(link => link.classList.remove('active'));
+            
+            const targetSection = document.getElementById(section);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                document.querySelector(`.admin-sidebar-nav a[href*='#${section}']`).classList.add('active');
+                currentSection = section;
+                
+                // Load data for specific sections
+                switch (section) {
+                    case 'dashboard':
+                        loadDashboardData();
+                        break;
+                    case 'users':
+                        loadUsersData();
+                        break;
+                    case 'listings':
+                        loadListingsData();
+                        break;
+                    case 'featured':
+                        loadFeaturedData();
+                        break;
+                    case 'pending':
+                        loadPendingData();
+                        break;
+                    case 'revenue':
+                        loadRevenueData();
+                        break;
+                    case 'admins':
+                        loadAdminsData();
+                        break;
+                }
+            }
+        }
+        
+        function adminNavigate(section) {
+            loadSection(section);
+            if (window.innerWidth <= 768) {
+                document.getElementById('admin-sidebar').style.transform = 'translateX(-100%)';
+            }
+        }
+        
+        function toggleAdminSidebar() {
+            document.getElementById('admin-sidebar').style.transform = 
+                document.getElementById('admin-sidebar').style.transform === 'translateX(-100%)' ? 'translateX(0)' : 'translateX(-100%)';
+        }
+        
+        function redirectToLogin() {
+            window.location.href = '/';
+        }
+        
+        function adminLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear stored user session
+                currentUser = null;
+                // Redirect to home page
+                window.location.href = '/';
+            }
+        }
+        
+        // Mock data functions
+        function loadDashboardData() {
+            // Mock dashboard data - in real app, these would be API calls
+            document.querySelectorAll('.admin-card p').forEach(p => p.textContent = '0');
+        }
+        
+        function loadUsersData() {
+            // Mock users data
+            const tbody = document.querySelector('#users table tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Users will be loaded from API</td></tr>';
+            }
+        }
+        
+        function loadListingsData() {
+            // Mock listings data
+            const tbody = document.querySelector('#listings table tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Listings will be loaded from API</td></tr>';
+            }
+        }
+        
+        async function loadFeaturedData() {
+            // Mock featured data
+            showNotification('Featured listings would be loaded from /admin/featured API endpoint', 'info');
+        }
+        
+        async function loadPendingData() {
+            // Mock pending data
+            showNotification('Pending listings would be loaded from /admin/pending API endpoint', 'info');
+        }
+        
+        async function loadRevenueData() {
+            // Mock revenue data
+            showNotification('Revenue data would be loaded from /admin/revenue API endpoint', 'info');
+        }
+        
+        async function loadAdminsData() {
+            // Mock admins data
+            showNotification('Administrator list would be loaded from /admin/admins API endpoint', 'info');
+        }
+        
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('admin-notification');
+            const colors = {
+                success: '#10b981',
+                error: '#ef4444',
+                info: '#3b82f6'
+            };
+            
+            container.innerHTML = `
+                <div style="background: ${colors[type]}; color: white; padding: 15px 20px; border-radius: var(--border-radius-lg); box-shadow: var(--shadow-md); margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.classList.add('show');
+            setTimeout(() => container.classList.remove('show'), 5000);
+        }
+        
+        // Keyboard shortcut for toggling sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('admin-sidebar').style.transform = 'translateX(-100%)';
+            }
+        });
+    </script>
+</body>
+</html>
+</script>
