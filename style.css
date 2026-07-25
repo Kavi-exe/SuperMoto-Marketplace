@@ -5382,10 +5382,3 @@ body.theme-light .admin-profile-info p strong {
 body.theme-light .admin-form-group label {
     color: #64748b;
 }
-
-body.admin-active .main-header {
-    padding: 8px 0;
-}
-body.admin-active .main-footer {
-    display: none;
-}
