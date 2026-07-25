@@ -3100,6 +3100,7 @@ function openAdminPanel(viewName) {
     const adminSection = document.getElementById("admin-section");
     if (!adminSection) return;
     adminSection.classList.add("active");
+    document.body.classList.add("admin-active");
 
     const allSections = document.getElementById("home-layout-section");
     if (allSections) allSections.style.display = "none";
