@@ -552,10 +552,22 @@ option:checked {
 }
 
 .custom-dropdown-icon {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     margin-left: 8px;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
     color: var(--text-secondary);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.custom-dropdown-trigger:hover .custom-dropdown-icon {
+    color: var(--accent-primary);
+    background: var(--bg-card);
 }
 
 .custom-dropdown-trigger[aria-expanded="true"] .custom-dropdown-icon {
@@ -612,6 +624,86 @@ option:checked {
     margin-top: 4px;
 }
 
+/* Hide native number spinners globally */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+/* Custom Number Input Wrapper with themed increment/decrement arrows */
+.number-input-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.number-input-wrap .form-input {
+    padding-right: 40px;
+}
+
+.number-input-arrows {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border-color);
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
+}
+
+.number-input-wrap:hover .number-input-arrows,
+.number-input-wrap:focus-within .number-input-arrows {
+    opacity: 1;
+}
+
+.num-arrow-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.55rem;
+    padding: 0;
+    transition: var(--transition-fast);
+    outline: none;
+    line-height: 0;
+}
+
+.num-arrow-btn:hover {
+    color: var(--accent-primary);
+    background: var(--bg-card);
+}
+
+.num-arrow-btn:active {
+    color: #fff;
+    background: var(--accent-primary);
+}
+
+.num-arrow-btn:disabled {
+    color: var(--border-color);
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.num-arrow-up {
+    border-radius: 0 15px 0 0;
+}
+
+.num-arrow-down {
+    border-radius: 0 0 15px 0;
+}
+
 .range-inputs {
     display: flex;
     gap: 12px;
@@ -619,19 +711,6 @@ option:checked {
 
 .range-inputs input {
     width: 50%;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-}
-
-.range-inputs input::-webkit-outer-spin-button,
-.range-inputs input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.range-inputs input[type=number] {
-    -moz-appearance: textfield;
 }
 
 .range-inputs input:hover {
@@ -5432,9 +5511,21 @@ body.admin-active .main-footer {
 
 .legal-chevron {
     margin-left: auto;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--text-secondary);
-    transition: transform var(--transition-fast);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: transform var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.legal-compliance-header:hover .legal-chevron {
+    color: var(--accent-primary);
+    background: var(--bg-card);
 }
 
 .legal-compliance-header.open .legal-chevron {

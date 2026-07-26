@@ -785,6 +785,14 @@ function bindEvents() {
     initCustomDropdown("spare-condition");
     initCustomDropdown("spare-location");
 
+    // Set current year as max for all year inputs
+    const currentYear = new Date().getFullYear();
+    const yearInputs = document.querySelectorAll("#ad-year, #filter-year-min, #filter-year-max");
+    yearInputs.forEach(el => { if (el) el.setAttribute("max", currentYear); });
+
+    // Initialize custom number input arrows
+    initCustomNumberInput("ad-year");
+
 
     // Search Console Inputs
     const searchForm = document.getElementById("search-console-form");
@@ -3136,6 +3144,53 @@ function initCustomDropdown(dropdownId, onSelectCallback) {
     } else if (options.length > 0) {
         options[0]?.classList.add("selected");
     }
+}
+
+// ── Custom Number Input ─────────────────────────────────────────
+function initCustomNumberInput(inputId) {
+    const input = document.getElementById(inputId);
+    const wrap = input?.closest(".number-input-wrap");
+    if (!input || !wrap) return;
+
+    const upBtn = wrap.querySelector(".num-arrow-up");
+    const downBtn = wrap.querySelector(".num-arrow-down");
+
+    if (upBtn) {
+        upBtn.addEventListener("click", () => {
+            const max = input.getAttribute("max");
+            const step = parseFloat(input.getAttribute("step")) || 1;
+            let val = parseFloat(input.value) || 0;
+            val = Math.min(val + step, max !== null ? parseFloat(max) : Infinity);
+            input.value = val;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    if (downBtn) {
+        downBtn.addEventListener("click", () => {
+            const min = input.getAttribute("min");
+            const step = parseFloat(input.getAttribute("step")) || 1;
+            let val = parseFloat(input.value) || 0;
+            val = Math.max(val - step, min !== null ? parseFloat(min) : -Infinity);
+            input.value = val;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    // Sync button disabled states on input change
+    const syncDisabled = () => {
+        const val = parseFloat(input.value);
+        const max = input.getAttribute("max");
+        const min = input.getAttribute("min");
+        if (upBtn) upBtn.disabled = max !== null && val >= parseFloat(max);
+        if (downBtn) downBtn.disabled = min !== null && val <= parseFloat(min);
+    };
+
+    input.addEventListener("input", syncDisabled);
+    input.addEventListener("change", syncDisabled);
+    requestAnimationFrame(syncDisabled);
 }
 
 // ── Admin Panel Functions ───────────────────────────────────────

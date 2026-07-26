@@ -208,9 +208,9 @@
                             <label>Model Year</label>
                             <div class="range-inputs">
                                 <input type="number" id="filter-year-min" class="form-input" placeholder="Min Year"
-                                    min="2000" max="2027">
+                                    min="2000">
                                 <input type="number" id="filter-year-max" class="form-input" placeholder="Max Year"
-                                    min="2000" max="2027">
+                                    min="2000">
                             </div>
                         </div>
                     </div>
@@ -420,8 +420,17 @@
                         </div>
                         <div class="form-group">
                             <label for="ad-year">Year of Manufacture *</label>
-                            <input type="number" id="ad-year" class="form-input" placeholder="e.g. 2023" min="1990"
-                                max="2027" required>
+                            <div class="number-input-wrap">
+                                <input type="number" id="ad-year" class="form-input" placeholder="e.g. 2023" min="1990" required>
+                                <div class="number-input-arrows">
+                                    <button class="num-arrow-btn num-arrow-up" type="button" aria-label="Increment" tabindex="-1">
+                                        <i class="fas fa-chevron-up"></i>
+                                    </button>
+                                    <button class="num-arrow-btn num-arrow-down" type="button" aria-label="Decrement" tabindex="-1">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="ad-condition">Condition *</label>
