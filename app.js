@@ -1200,8 +1200,6 @@ function bindEvents() {
         });
     }
 
-    // Countdown timer
-    startHeroCountdown();
 }
 
 function setMobileNavOpen(isOpen) {
@@ -3256,56 +3254,6 @@ function initCustomNumberInput(inputId) {
     input.addEventListener("input", syncDisabled);
     input.addEventListener("change", syncDisabled);
     requestAnimationFrame(syncDisabled);
-}
-
-// ── Hero Countdown ──────────────────────────────────────────────
-function startHeroCountdown() {
-    const badge = document.getElementById("countdown-badge");
-    if (!badge) return;
-
-    const elMonths = document.getElementById("cd-months");
-    const elWeeks = document.getElementById("cd-weeks");
-    const elDays = document.getElementById("cd-days");
-    const elHours = document.getElementById("cd-hours");
-    const elMinutes = document.getElementById("cd-minutes");
-    const elSeconds = document.getElementById("cd-seconds");
-    if (!elMonths || !elSeconds) return;
-
-    const end = new Date();
-    end.setMonth(end.getMonth() + 6);
-
-    function tick() {
-        const now = new Date();
-        let diff = Math.max(0, end - now);
-
-        const monthSeconds = 30.44 * 86400;
-        const weekSeconds = 7 * 86400;
-        const daySeconds = 86400;
-        const hourSeconds = 3600;
-        const minuteSeconds = 60;
-
-        let secs = Math.floor(diff / 1000);
-        const months = Math.floor(secs / monthSeconds);
-        secs = Math.round(secs - months * monthSeconds);
-        const weeks = Math.floor(secs / weekSeconds);
-        secs -= weeks * weekSeconds;
-        const days = Math.floor(secs / daySeconds);
-        secs -= days * daySeconds;
-        const hours = Math.floor(secs / hourSeconds);
-        secs -= hours * hourSeconds;
-        const minutes = Math.floor(secs / minuteSeconds);
-        secs -= minutes * minuteSeconds;
-
-        elMonths.textContent = months;
-        elWeeks.textContent = weeks;
-        elDays.textContent = days;
-        elHours.textContent = String(hours).padStart(2, "0");
-        elMinutes.textContent = String(minutes).padStart(2, "0");
-        elSeconds.textContent = String(secs).padStart(2, "0");
-    }
-
-    tick();
-    setInterval(tick, 1000);
 }
 
 // ── Admin Panel Functions ───────────────────────────────────────
