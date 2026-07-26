@@ -3209,8 +3209,14 @@ function initCustomNumberInput(inputId) {
         upBtn.addEventListener("click", () => {
             const max = input.getAttribute("max");
             const step = parseFloat(input.getAttribute("step")) || 1;
-            let val = parseFloat(input.value) || 0;
-            val = Math.min(val + step, max !== null ? parseFloat(max) : Infinity);
+            const currentVal = input.value.trim();
+            let val;
+            if (currentVal === "") {
+                val = max !== null ? parseFloat(max) : step;
+            } else {
+                val = parseFloat(currentVal) + step;
+                if (max !== null) val = Math.min(val, parseFloat(max));
+            }
             input.value = val;
             input.dispatchEvent(new Event("input", { bubbles: true }));
             input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3221,8 +3227,14 @@ function initCustomNumberInput(inputId) {
         downBtn.addEventListener("click", () => {
             const min = input.getAttribute("min");
             const step = parseFloat(input.getAttribute("step")) || 1;
-            let val = parseFloat(input.value) || 0;
-            val = Math.max(val - step, min !== null ? parseFloat(min) : -Infinity);
+            const currentVal = input.value.trim();
+            let val;
+            if (currentVal === "") {
+                val = min !== null ? parseFloat(min) : 0;
+            } else {
+                val = parseFloat(currentVal) - step;
+                if (min !== null) val = Math.max(val, parseFloat(min));
+            }
             input.value = val;
             input.dispatchEvent(new Event("input", { bubbles: true }));
             input.dispatchEvent(new Event("change", { bubbles: true }));
