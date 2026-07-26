@@ -346,7 +346,7 @@ const PRELOADED_ADS = [
         sellerEmail: "info@sbceylon.lk",
         description: "2022 Ducati Panigale V4 S in absolute mint condition. Includes full titanium Akrapovič exhaust system (mapped), carbon fiber mudguards, winglets, and dry clutch conversion. Öhlins electronic suspension, Brembo Stylema calipers. Carefully ridden, serviced every 500km. A true Italian racing icon.",
         images: [
-            "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1753563823155-64164a43c830?auto=format&fit=crop&w=800&q=80",
             "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80",
             "https://images.unsplash.com/photo-1609630875171-b1321377ee65?auto=format&fit=crop&w=800&q=80"
         ],
