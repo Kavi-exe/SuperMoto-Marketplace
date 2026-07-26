@@ -3278,24 +3278,30 @@ function startHeroCountdown() {
         const now = new Date();
         let diff = Math.max(0, end - now);
 
-        const totalSeconds = Math.floor(diff / 1000);
-        const months = Math.floor(totalSeconds / (30.44 * 86400));
-        let remainder = totalSeconds - months * 30.44 * 86400;
-        const weeks = Math.floor(remainder / (7 * 86400));
-        remainder -= weeks * 7 * 86400;
-        const days = Math.floor(remainder / 86400);
-        remainder -= days * 86400;
-        const hours = Math.floor(remainder / 3600);
-        remainder -= hours * 3600;
-        const minutes = Math.floor(remainder / 60);
-        const seconds = remainder % 60;
+        const monthSeconds = 30.44 * 86400;
+        const weekSeconds = 7 * 86400;
+        const daySeconds = 86400;
+        const hourSeconds = 3600;
+        const minuteSeconds = 60;
+
+        let secs = Math.floor(diff / 1000);
+        const months = Math.floor(secs / monthSeconds);
+        secs = Math.round(secs - months * monthSeconds);
+        const weeks = Math.floor(secs / weekSeconds);
+        secs -= weeks * weekSeconds;
+        const days = Math.floor(secs / daySeconds);
+        secs -= days * daySeconds;
+        const hours = Math.floor(secs / hourSeconds);
+        secs -= hours * hourSeconds;
+        const minutes = Math.floor(secs / minuteSeconds);
+        secs -= minutes * minuteSeconds;
 
         elMonths.textContent = months;
         elWeeks.textContent = weeks;
         elDays.textContent = days;
         elHours.textContent = String(hours).padStart(2, "0");
         elMinutes.textContent = String(minutes).padStart(2, "0");
-        elSeconds.textContent = String(seconds).padStart(2, "0");
+        elSeconds.textContent = String(secs).padStart(2, "0");
     }
 
     tick();
