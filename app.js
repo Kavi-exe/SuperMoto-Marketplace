@@ -1068,6 +1068,16 @@ function bindEvents() {
         }
     });
 
+    // Legal Compliance toggle
+    const legalHeader = document.querySelector(".legal-compliance-header");
+    if (legalHeader) {
+        legalHeader.addEventListener("click", () => {
+            legalHeader.classList.toggle("open");
+            const content = document.getElementById("legal-compliance-content");
+            if (content) content.classList.toggle("open");
+        });
+    }
+
     // Engine capacity validation
     const engineCapacityInput = document.getElementById("ad-engine-capacity");
     if (engineCapacityInput) {
@@ -2818,6 +2828,24 @@ function removeUploadedImage(idx) {
 
 // Submit the ad — creates draft then opens Stripe payment
 async function submitNewAd() {
+    // Check legal agreement checkbox
+    const legalCheckbox = document.getElementById("legal-agree-checkbox");
+    if (legalCheckbox && !legalCheckbox.checked) {
+        showToast("You must agree to the Seller Responsibility & Legal Compliance terms before posting your ad.", "error");
+        // Open the legal compliance accordion to draw attention
+        const legalHeader = document.querySelector(".legal-compliance-header");
+        const legalContent = document.getElementById("legal-compliance-content");
+        if (legalHeader) legalHeader.classList.add("open");
+        if (legalContent) legalContent.classList.add("open");
+        legalCheckbox.style.outline = "2px solid var(--accent-primary)";
+        legalCheckbox.style.outlineOffset = "2px";
+        setTimeout(() => {
+            legalCheckbox.style.outline = "";
+            legalCheckbox.style.outlineOffset = "";
+        }, 3000);
+        return;
+    }
+
     if (!validateEngineCapacity(true)) {
         goToStep(2);
         return;
@@ -2930,6 +2958,11 @@ function resetPostForm() {
     if (previewContainer) previewContainer.innerHTML = "";
     const errorEl = document.getElementById("engine-capacity-error");
     if (errorEl) errorEl.style.display = "none";
+    // Reset legal compliance accordion
+    const legalHeader = document.querySelector(".legal-compliance-header");
+    const legalContent = document.getElementById("legal-compliance-content");
+    if (legalHeader) legalHeader.classList.remove("open");
+    if (legalContent) legalContent.classList.remove("open");
     activeStep = 1;
     goToStep(1);
 }

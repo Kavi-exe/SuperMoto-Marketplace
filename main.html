@@ -557,17 +557,7 @@
                             </div>
                         </div>
 
-                        <!-- Alternate Unsplash URLs for testing -->
-                        <div class="form-group form-input-full">
-                            <label for="ad-unsplash-urls">Alternate Web Image URLs (comma separated for
-                                multiple)</label>
-                            <input type="text" id="ad-unsplash-urls" class="form-input"
-                                placeholder="e.g. https://images.unsplash.com/photo-1583121274602-3e2820c69888, ...">
-                            <span style="font-size:0.75rem; color:var(--text-muted)">Tip: You can use direct web URLs if
-                                you do not want to upload local files.</span>
-                        </div>
-
-                        <div class="form-group">
+<div class="form-group">
                             <label for="ad-price">Expected Price (LKR) *</label>
                             <input type="number" id="ad-price" class="form-input" placeholder="e.g. 150000000"
                                 min="10000" required>
@@ -655,6 +645,46 @@
                             <input type="hidden" id="ad-seller-location" value="Colombo" required>
                         </div>
                     </div>
+
+                    <!-- Seller Responsibility & Legal Compliance -->
+                    <div class="legal-compliance-wrapper">
+                        <div class="legal-compliance-header" id="legal-compliance-toggle">
+                            <i class="fas fa-gavel"></i>
+                            <span>Seller Responsibility &amp; Legal Compliance</span>
+                            <i class="fas fa-chevron-down legal-chevron"></i>
+                        </div>
+                        <div class="legal-compliance-content" id="legal-compliance-content">
+                            <h4>Seller Responsibility and Legal Compliance</h4>
+                            <p>The Seller acknowledges and agrees that they assume full legal responsibility for every item, vehicle, product, or service advertised through CeylonSuperHub.</p>
+                            <p>The Seller represents and warrants that:</p>
+                            <ul>
+                                <li>They are the lawful owner of the advertised item or have the legal authority to sell it.</li>
+                                <li>The advertised item is legal to own, advertise, and sell under the laws of the Democratic Socialist Republic of Sri Lanka.</li>
+                                <li>The item is not stolen, counterfeit, fraudulently obtained, or otherwise involved in any unlawful activity.</li>
+                                <li>All information, specifications, descriptions, photographs, and documents provided are accurate, complete, and not misleading.</li>
+                                <li>Any required licenses, registrations, permits, or certifications relating to the advertised item have been lawfully obtained and remain valid.</li>
+                            </ul>
+                            <p>The Seller accepts full legal and financial responsibility for the authenticity, ownership, legality, condition, and sale of the advertised item. CeylonSuperHub acts solely as an online marketplace that facilitates communication between buyers and sellers and does not verify, inspect, certify, or guarantee the legality, ownership, quality, or authenticity of any advertised item.</p>
+                            <p>The Seller agrees to indemnify and hold harmless CeylonSuperHub, its owners, employees, affiliates, and partners from and against any claims, losses, damages, liabilities, legal proceedings, penalties, costs, or expenses arising out of or relating to:</p>
+                            <ul>
+                                <li>The advertisement or sale of any illegal, prohibited, counterfeit, stolen, or unauthorized item.</li>
+                                <li>Any false, inaccurate, or misleading information provided by the Seller.</li>
+                                <li>Any violation of applicable laws or regulations.</li>
+                                <li>Any dispute between the Seller and a buyer or any third party.</li>
+                            </ul>
+                            <p>CeylonSuperHub reserves the right to remove any advertisement, suspend or terminate any account, and report suspected unlawful activity to the appropriate authorities without prior notice if it reasonably believes that a Seller has violated these Terms or applicable law.</p>
+                        </div>
+                        <div class="legal-compliance-checkbox-row">
+                            <label class="legal-checkbox-label">
+                                <input type="checkbox" id="legal-agree-checkbox" required>
+                                <span class="legal-checkbox-custom">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                                <span class="legal-checkbox-text">I have read and agree to the CeylonSuperHub Seller Agreement and Terms &amp; Conditions. I confirm that all information provided is accurate, and I accept full responsibility for my advertisement.</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="step-navigation-row">
                         <button type="button" class="btn-step btn-prev btn-step-prev"><i class="fas fa-arrow-left"></i>
                             Previous</button>

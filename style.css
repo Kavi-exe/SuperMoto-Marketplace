@@ -5393,3 +5393,174 @@ body.theme-light .admin-form-group label {
 body.admin-active .main-footer {
     display: none;
 }
+
+/* ==========================================================================
+   Seller Responsibility & Legal Compliance (Post-Ad Step 4)
+   ========================================================================== */
+.legal-compliance-wrapper {
+    margin: 24px 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+}
+
+.legal-compliance-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--transition-fast);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(26, 111, 255, 0.05);
+}
+
+.legal-compliance-header:hover {
+    background: rgba(26, 111, 255, 0.1);
+}
+
+.legal-compliance-header .fa-gavel {
+    color: var(--accent-primary);
+    font-size: 1rem;
+}
+
+.legal-chevron {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: transform var(--transition-fast);
+}
+
+.legal-compliance-header.open .legal-chevron {
+    transform: rotate(180deg);
+}
+
+.legal-compliance-content {
+    padding: 20px;
+    display: none;
+    animation: legalFadeIn 0.3s ease;
+}
+
+.legal-compliance-content.open {
+    display: block;
+}
+
+@keyframes legalFadeIn {
+    from { opacity: 0; max-height: 0; }
+    to { opacity: 1; max-height: 800px; }
+}
+
+.legal-compliance-content h4 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.legal-compliance-content p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 12px;
+}
+
+.legal-compliance-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.legal-compliance-content ul li {
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 20px;
+    position: relative;
+}
+
+.legal-compliance-content ul li::before {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    left: 0;
+    top: 1px;
+    font-size: 0.7rem;
+    color: var(--accent-primary);
+}
+
+/* Checkbox Row */
+.legal-compliance-checkbox-row {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.legal-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.legal-checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.legal-checkbox-custom {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    margin-top: 1px;
+}
+
+.legal-checkbox-custom i {
+    font-size: 0.7rem;
+    color: transparent;
+    transition: color var(--transition-fast);
+}
+
+.legal-checkbox-label input[type="checkbox"]:checked + .legal-checkbox-custom {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 8px var(--accent-primary-glow);
+}
+
+.legal-checkbox-label input[type="checkbox"]:checked + .legal-checkbox-custom i {
+    color: #fff;
+}
+
+.legal-checkbox-label:hover .legal-checkbox-custom {
+    border-color: var(--accent-primary);
+}
+
+.legal-checkbox-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.legal-checkbox-label input[type="checkbox"]:checked ~ .legal-checkbox-text {
+    color: var(--text-primary);
+}
