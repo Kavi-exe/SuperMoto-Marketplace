@@ -1199,6 +1199,9 @@ function bindEvents() {
             if (e.target === deleteModal) closeDeleteConfirmModal();
         });
     }
+
+    // Countdown timer
+    startHeroCountdown();
 }
 
 function setMobileNavOpen(isOpen) {
@@ -3253,6 +3256,50 @@ function initCustomNumberInput(inputId) {
     input.addEventListener("input", syncDisabled);
     input.addEventListener("change", syncDisabled);
     requestAnimationFrame(syncDisabled);
+}
+
+// ── Hero Countdown ──────────────────────────────────────────────
+function startHeroCountdown() {
+    const badge = document.getElementById("countdown-badge");
+    if (!badge) return;
+
+    const elMonths = document.getElementById("cd-months");
+    const elWeeks = document.getElementById("cd-weeks");
+    const elDays = document.getElementById("cd-days");
+    const elHours = document.getElementById("cd-hours");
+    const elMinutes = document.getElementById("cd-minutes");
+    const elSeconds = document.getElementById("cd-seconds");
+    if (!elMonths || !elSeconds) return;
+
+    const end = new Date();
+    end.setMonth(end.getMonth() + 6);
+
+    function tick() {
+        const now = new Date();
+        let diff = Math.max(0, end - now);
+
+        const totalSeconds = Math.floor(diff / 1000);
+        const months = Math.floor(totalSeconds / (30.44 * 86400));
+        let remainder = totalSeconds - months * 30.44 * 86400;
+        const weeks = Math.floor(remainder / (7 * 86400));
+        remainder -= weeks * 7 * 86400;
+        const days = Math.floor(remainder / 86400);
+        remainder -= days * 86400;
+        const hours = Math.floor(remainder / 3600);
+        remainder -= hours * 3600;
+        const minutes = Math.floor(remainder / 60);
+        const seconds = remainder % 60;
+
+        elMonths.textContent = months;
+        elWeeks.textContent = weeks;
+        elDays.textContent = days;
+        elHours.textContent = String(hours).padStart(2, "0");
+        elMinutes.textContent = String(minutes).padStart(2, "0");
+        elSeconds.textContent = String(seconds).padStart(2, "0");
+    }
+
+    tick();
+    setInterval(tick, 1000);
 }
 
 // ── Admin Panel Functions ───────────────────────────────────────
