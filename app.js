@@ -263,6 +263,34 @@ function validateEngineCapacity(showError = true) {
     return !invalid;
 }
 
+function validateYear(showError = true) {
+    const input = document.getElementById("ad-year");
+    const errorEl = document.getElementById("ad-year-error");
+    if (!input) return true;
+
+    const year = parseInt(input.value);
+    const min = input.min ? parseInt(input.min) : null;
+    const max = input.max ? parseInt(input.max) : null;
+    const invalid = isNaN(year) || (min !== null && year < min) || (max !== null && year > max);
+
+    if (errorEl) {
+        if (invalid && showError) {
+            let msg = "Year must be between " + min;
+            if (max) msg += " and " + max;
+            msg += ".";
+            errorEl.textContent = msg;
+            errorEl.style.display = "block";
+        } else {
+            errorEl.style.display = "none";
+        }
+    }
+    if (input) {
+        input.style.borderColor = invalid && showError ? "#dc2626" : "";
+    }
+
+    return !invalid;
+}
+
 // Preloaded mock database for supercars and superbikes
 const PRELOADED_ADS = [
     {
@@ -1094,6 +1122,19 @@ function bindEvents() {
             if (parseEngineCapacity(engineCapacityInput.value) > 250) {
                 validateEngineCapacity(false);
             }
+        });
+    }
+
+    // Year validation
+    const yearInput = document.getElementById("ad-year");
+    if (yearInput) {
+        yearInput.addEventListener("blur", () => validateYear(true));
+        yearInput.addEventListener("input", () => {
+            const val = parseInt(yearInput.value);
+            const min = yearInput.min ? parseInt(yearInput.min) : null;
+            const max = yearInput.max ? parseInt(yearInput.max) : null;
+            const valid = !isNaN(val) && (min === null || val >= min) && (max === null || val <= max);
+            if (valid) validateYear(false);
         });
     }
 
@@ -2755,6 +2796,10 @@ function validateStep(step) {
         }
     });
 
+    if (step === 1 && !validateYear(true)) {
+        isValid = false;
+    }
+
     if (step === 2 && !validateEngineCapacity(true)) {
         isValid = false;
     }
@@ -2851,6 +2896,11 @@ async function submitNewAd() {
             legalCheckbox.style.outline = "";
             legalCheckbox.style.outlineOffset = "";
         }, 3000);
+        return;
+    }
+
+    if (!validateYear(true)) {
+        goToStep(1);
         return;
     }
 

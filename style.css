@@ -723,6 +723,17 @@ input[type=number] {
     box-shadow: 0 0 0 2px var(--accent-primary-glow);
 }
 
+.error-msg {
+    display: block;
+    color: #dc2626;
+    font-size: 0.8rem;
+    margin-top: 6px;
+}
+
+.error-msg.visible {
+    display: block;
+}
+
 .search-action-row {
     display: flex;
     justify-content: space-between;
