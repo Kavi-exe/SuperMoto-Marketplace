@@ -737,6 +737,26 @@ function bindEvents() {
         adminLogout();
     });
 
+    // Admin mobile sidebar toggle
+    const adminToggle = document.getElementById("admin-mobile-toggle");
+    const adminSidebar = document.getElementById("admin-sidebar");
+    const adminOverlay = document.getElementById("admin-overlay");
+    if (adminToggle && adminSidebar && adminOverlay) {
+        const closeSidebar = () => {
+            adminSidebar.classList.remove("open");
+            adminOverlay.classList.remove("visible");
+        };
+        adminToggle.addEventListener("click", () => {
+            adminSidebar.classList.toggle("open");
+            adminOverlay.classList.toggle("visible");
+        });
+        adminOverlay.addEventListener("click", closeSidebar);
+        // Close sidebar when a nav link is clicked (mobile)
+        adminSidebar.querySelectorAll(".admin-nav-link").forEach(link => {
+            link.addEventListener("click", closeSidebar);
+        });
+    }
+
     // Mobile navigation toggle
     const mobileNavToggle = document.getElementById("mobile-nav-toggle");
     const mainNavigation = document.getElementById("main-navigation");

@@ -1329,24 +1329,28 @@
     <!-- Admin SPA View Section -->
     <div id="admin-section" class="view-section">
         <div class="admin-layout">
-            <aside class="admin-sidebar">
+            <aside class="admin-sidebar" id="admin-sidebar">
                 <div class="admin-sidebar-header">
                     <span class="admin-sidebar-logo">CeylonSuperHub</span>
                     <span class="admin-sidebar-role">Admin Panel</span>
                 </div>
                 <nav class="admin-nav">
-                    <a href="#" class="admin-nav-link active" data-admin-view="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="users"><i class="fas fa-users"></i> Users</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="listings"><i class="fas fa-list"></i> Listings</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="featured"><i class="fas fa-star"></i> Featured</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="pending"><i class="fas fa-clock"></i> Pending Approvals</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="revenue"><i class="fas fa-dollar-sign"></i> Revenue</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="admins"><i class="fas fa-shield-alt"></i> Admins</a>
-                    <a href="#" class="admin-nav-link" data-admin-view="settings"><i class="fas fa-cog"></i> Settings</a>
-                    <a href="#" class="admin-nav-link admin-logout-link" id="admin-logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="#" class="admin-nav-link active" data-admin-view="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="users"><i class="fas fa-users"></i> <span>Users</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="listings"><i class="fas fa-list"></i> <span>Listings</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="featured"><i class="fas fa-star"></i> <span>Featured</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="pending"><i class="fas fa-clock"></i> <span>Pending Approvals</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="revenue"><i class="fas fa-dollar-sign"></i> <span>Revenue</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="admins"><i class="fas fa-shield-alt"></i> <span>Admins</span></a>
+                    <a href="#" class="admin-nav-link" data-admin-view="settings"><i class="fas fa-cog"></i> <span>Settings</span></a>
+                    <a href="#" class="admin-nav-link admin-logout-link" id="admin-logout-link"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
                 </nav>
             </aside>
+            <div class="admin-overlay" id="admin-overlay"></div>
             <main class="admin-content">
+                <button class="admin-mobile-toggle" id="admin-mobile-toggle" aria-label="Toggle sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <!-- Dashboard -->
                 <div class="admin-panel active" data-admin-panel="dashboard">
                     <div class="admin-panel-header">
