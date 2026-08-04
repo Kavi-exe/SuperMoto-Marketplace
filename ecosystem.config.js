@@ -1,8 +1,10 @@
+const path = require('path');
+
 module.exports = {
   apps: [
     {
       name: 'ceylonsuperhub',
-      cwd: './server',
+      cwd: path.join(__dirname, 'server'),
       script: 'index.js',
       instances: 1,
       exec_mode: 'fork',
@@ -14,8 +16,8 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: '3001',
       },
-      out_file: '../logs/pm2-out.log',
-      error_file: '../logs/pm2-error.log',
+      out_file: path.join(__dirname, 'logs', 'pm2-out.log'),
+      error_file: path.join(__dirname, 'logs', 'pm2-error.log'),
       merge_logs: true,
     },
   ],
