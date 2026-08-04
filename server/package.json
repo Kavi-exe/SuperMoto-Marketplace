@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "backup": "node backup-db.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

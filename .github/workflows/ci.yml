@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check all JavaScript
+        working-directory: .
+        run: |
+          files=$(git ls-files '*.js' | grep -v node_modules || true)
+          failed=0
+          for f in $files; do
+            if ! node --check "$f"; then failed=1; fi
+          done
+          if [ "$failed" -ne 0 ]; then echo "::error::Syntax check failed"; exit 1; fi
+
+      - name: Boot smoke test
+        working-directory: server
+        env:
+          NODE_ENV: test
+          PORT: 3111
+        run: |
+          node index.js > /tmp/server.log 2>&1 &
+          PID=$!
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3111/api/health > /tmp/health.json 2>/dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::Server failed to boot. Log tail:"
+            tail -50 /tmp/server.log
+            kill $PID 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Health: $(cat /tmp/health.json)"
+          curl -sf http://localhost:3111/api/ads > /tmp/ads.json || { echo "::error::GET /api/ads failed"; tail -50 /tmp/server.log; kill $PID; exit 1; }
+          echo "Ads endpoint OK"
+
+          kill $PID 2>/dev/null || true
+          wait $PID 2>/dev/null || true
