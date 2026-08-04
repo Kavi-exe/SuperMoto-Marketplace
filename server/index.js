@@ -21,6 +21,7 @@ const {
   deleteUserRefreshTokens,
   markUserEmailVerified,
   updateUnverifiedUserCredentials,
+  updateUserPassword,
   createEmailVerificationOtp,
   getLatestUnexpiredOtpForUserEmail,
   markOtpAsUsed,
@@ -76,7 +77,7 @@ const {
 
 const { loginRateLimiter, otpVerifyRateLimiter, resetLoginAttempts } = require('./middleware/rateLimit');
 const { createUploadMiddleware, isCloudinaryConfigured, uploadFilesToCloudinary } = require('./config/cloudinary');
-const { sendVerificationEmail, isEmailConfigured } = require('./config/email');
+const { sendVerificationEmail, sendPasswordResetEmail, isEmailConfigured } = require('./config/email');
 const PRELOADED_ADS = require('./seed-data');
 
 const app = express();
@@ -282,6 +283,16 @@ function jwtSignEmailVerificationToken(userId, email) {
 }
 
 function jwtVerifyEmailVerificationToken(token) {
+  const secret = process.env.JWT_EMAIL_VERIFICATION_SECRET || 'local-dev-email-verification-secret-change-me';
+  return jwt.verify(token, secret);
+}
+
+function jwtSignPasswordResetToken(userId, email) {
+  const secret = process.env.JWT_EMAIL_VERIFICATION_SECRET || 'local-dev-email-verification-secret-change-me';
+  return jwt.sign({ sub: userId, email, type: 'password_reset' }, secret, { expiresIn: '30m' });
+}
+
+function jwtVerifyPasswordResetToken(token) {
   const secret = process.env.JWT_EMAIL_VERIFICATION_SECRET || 'local-dev-email-verification-secret-change-me';
   return jwt.verify(token, secret);
 }
@@ -544,6 +555,178 @@ app.post('/api/auth/oauth-login', async (req, res) => {
     return res.json({ ok: true, user: publicUser(user), accessToken });
   } catch (err) {
     console.error('[oauth-login]', err);
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const rawEmail = String((req.body || {}).email || '').trim().toLowerCase();
+
+    if (!validateEmail(rawEmail)) {
+      return res.status(400).json({ ok: false, error: 'Invalid email format' });
+    }
+
+    const db = openDb();
+    const user = await getUserByEmail(db, rawEmail);
+
+    // Never reveal whether an account exists for this email.
+    if (!user || user.status === 'disabled') {
+      db.close();
+      return res.json({
+        ok: true,
+        message: 'If an account exists for this email, a password reset code has been sent.',
+      });
+    }
+
+    // Limit reset code requests (max 3 per 15 minutes per account).
+    const resetCount = await getResendAttemptsInWindow(db, user.id, 15 * 60 * 1000);
+    if (resetCount >= 3) {
+      db.close();
+      return res.status(429).json({
+        ok: false,
+        error: 'Too many requests. Please wait 15 minutes before trying again.',
+      });
+    }
+    await recordResendAttempt(db, user.id);
+
+    const otpCode = generateOtp();
+    const otpCodeHash = createOtpVerificationCodeHash(otpCode);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    await createEmailVerificationOtp(db, {
+      userId: user.id,
+      email: rawEmail,
+      codeHash: otpCodeHash,
+      expiresAt,
+      purpose: 'password_reset',
+    });
+
+    const resetToken = jwtSignPasswordResetToken(user.id, rawEmail);
+    db.close();
+
+    const emailResult = await sendPasswordResetEmail({
+      to: rawEmail,
+      otpCode,
+      userName: user.name,
+    });
+
+    return res.json({
+      ok: true,
+      message: 'Password reset code sent. Check your email.',
+      resetToken,
+      ...(emailResult.devMode && { otpCode }),
+    });
+  } catch (err) {
+    console.error('[forgot-password]', err);
+    return res.status(500).json({ ok: false, error: 'Server error' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { resetToken, otp, newPassword } = req.body || {};
+
+    if (!resetToken || !otp) {
+      return res.status(400).json({ ok: false, error: 'resetToken and otp are required' });
+    }
+    if (!newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ ok: false, error: 'Password must be at least 8 characters' });
+    }
+
+    let payload;
+    try {
+      payload = jwtVerifyPasswordResetToken(resetToken);
+    } catch {
+      return res.status(401).json({ ok: false, error: 'Invalid or expired reset token. Please request a new code.' });
+    }
+
+    if (payload.type !== 'password_reset') {
+      return res.status(401).json({ ok: false, error: 'Invalid reset token' });
+    }
+
+    const userId = payload.sub;
+    const email = String(payload.email || '').trim().toLowerCase();
+    if (!email || !validateEmail(email) || !isEmailDomainAllowed(email)) {
+      return res.status(400).json({ ok: false, error: 'Email is not allowed' });
+    }
+
+    const otpStr = String(otp).trim();
+    if (!/^\d{6}$/.test(otpStr)) {
+      return res.status(400).json({ ok: false, error: 'OTP must be a 6-digit code' });
+    }
+
+    const db = openDb();
+    const user = await getUserById(db, userId);
+
+    if (!user) {
+      db.close();
+      return res.status(404).json({ ok: false, error: 'User not found' });
+    }
+    if (user.status === 'disabled') {
+      db.close();
+      return res.status(403).json({ ok: false, error: 'This account has been disabled. Contact support.' });
+    }
+
+    const isLocked = await isVerificationLocked(db, userId);
+    if (isLocked) {
+      const lockedUntil = new Date(user.verification_locked_until);
+      const minutesRemaining = Math.ceil((lockedUntil - new Date()) / (60 * 1000));
+      db.close();
+      return res.status(429).json({
+        ok: false,
+        error: `Too many failed verification attempts. Please try again in ${minutesRemaining} minutes.`,
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const latestOtp = await getLatestUnexpiredOtpForUserEmail(db, {
+      userId,
+      email,
+      nowIso,
+      purpose: 'password_reset',
+    });
+
+    if (!latestOtp) {
+      db.close();
+      return res.status(400).json({ ok: false, error: 'Verification code expired. Please request a new one.' });
+    }
+
+    const otpHash = createOtpVerificationCodeHash(otpStr);
+
+    if (latestOtp.code_hash !== otpHash) {
+      await incrementVerificationFailedAttempts(db, userId);
+      const failedAttempts = user.verification_failed_attempts + 1;
+
+      const MAX_FAILED_ATTEMPTS = 5;
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        await lockVerificationAttempts(db, userId, new Date(Date.now() + 30 * 60 * 1000).toISOString());
+        db.close();
+        return res.status(429).json({
+          ok: false,
+          error: 'Too many failed verification attempts. Account locked for 30 minutes.',
+        });
+      }
+
+      db.close();
+      return res.status(401).json({
+        ok: false,
+        error: 'Invalid verification code',
+        attemptsRemaining: MAX_FAILED_ATTEMPTS - failedAttempts,
+      });
+    }
+
+    await resetVerificationFailedAttempts(db, userId);
+    await markOtpAsUsed(db, latestOtp.id);
+
+    const passwordHash = await bcrypt.hash(String(newPassword), BCRYPT_ROUNDS);
+    await updateUserPassword(db, userId, passwordHash);
+    await deleteUserRefreshTokens(db, userId);
+
+    db.close();
+    return res.json({ ok: true, message: 'Password updated successfully. You can now sign in.' });
+  } catch (err) {
+    console.error('[reset-password]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -1337,7 +1520,7 @@ app.use(
   express.static(ROOT_DIR, {
     maxAge: '1h',
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
+      if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
         res.setHeader('Cache-Control', 'no-cache');
       }
     },

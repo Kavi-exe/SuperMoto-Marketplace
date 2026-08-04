@@ -8,7 +8,7 @@
     <meta name="description"
         content="CeylonSuperHub is the ultimate luxury online marketplace to buy and sell supercars and superbikes in Sri Lanka.">
     <!-- Google Fonts -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260804">
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -1648,7 +1648,7 @@
                                 <input type="checkbox" id="login-remember" checked>
                                 <span>Remember me</span>
                             </label>
-                            <a href="#" class="login-forgot">Forgot password?</a>
+                            <a href="#" class="login-forgot" onclick="openForgotPasswordModal(); return false;">Forgot password?</a>
                         </div>
 
                         <p class="login-error" id="login-error" role="alert"></p>
@@ -1757,6 +1757,32 @@
     </div>
 
 
+
+    <!-- Forgot Password Modal -->
+    <div id="forgot-password-modal-container" class="view-overlay-container">
+        <div class="forgot-password-modal">
+            <button type="button" class="forgot-pw-close-btn" onclick="closeForgotPasswordModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3 class="forgot-pw-title">Reset your password</h3>
+
+            <div id="forgot-step-request">
+                <p class="forgot-pw-sub">Enter your account email and we'll send you a 6-digit reset code.</p>
+                <input type="email" id="forgot-email" class="forgot-pw-input" placeholder="Your email" autocomplete="email">
+                <p class="forgot-pw-error" id="forgot-pw-error" role="alert"></p>
+                <button type="button" class="forgot-pw-btn" onclick="requestPasswordReset()">Send reset code</button>
+            </div>
+
+            <div id="forgot-step-reset" style="display:none">
+                <p class="forgot-pw-sub">Enter the 6-digit code from your email and choose a new password.</p>
+                <p class="forgot-pw-dev-hint" id="forgot-otp-hint" style="display:none"></p>
+                <input type="text" id="forgot-otp" class="forgot-pw-input" placeholder="6-digit code" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                <input type="password" id="forgot-new-password" class="forgot-pw-input" placeholder="New password (min 8 characters)" autocomplete="new-password">
+                <p class="forgot-pw-error" id="forgot-pw-error-2" role="alert"></p>
+                <button type="button" class="forgot-pw-btn" onclick="submitPasswordReset()">Reset password</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Delete Confirmation Modal -->
     <div id="delete-modal-container" class="view-overlay-container">
@@ -1881,7 +1907,7 @@
     </footer>
 
     <!-- Main Logic Script -->
-    <script src="app.js"></script>
+    <script src="app.js?v=20260804"></script>
 </body>
 
 </html>

@@ -83,6 +83,7 @@ async function initSchema() {
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       used_at TEXT,
+      purpose TEXT NOT NULL DEFAULT 'email_verification',
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`
   );
@@ -208,6 +209,16 @@ async function migrateSchema(db) {
       )`
     );
   }
+
+  // Add purpose column to email_verification_otps if missing
+  const otpColumns = await all(db, 'PRAGMA table_info(email_verification_otps)');
+  const otpColNames = new Set(otpColumns.map((c) => c.name));
+  if (!otpColNames.has('purpose')) {
+    await run(
+      db,
+      "ALTER TABLE email_verification_otps ADD COLUMN purpose TEXT NOT NULL DEFAULT 'email_verification'"
+    );
+  }
 }
 
 async function migrateAdminSchema(db) {
@@ -284,24 +295,28 @@ async function updateUnverifiedUserCredentials(db, userId, name, passwordHash) {
   );
 }
 
-async function createEmailVerificationOtp(db, { userId, email, codeHash, expiresAt }) {
+async function updateUserPassword(db, userId, passwordHash) {
+  await run(db, 'UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, userId]);
+}
+
+async function createEmailVerificationOtp(db, { userId, email, codeHash, expiresAt, purpose = 'email_verification' }) {
   const createdAt = new Date().toISOString();
   await run(
     db,
-    'INSERT INTO email_verification_otps (user_id, email, code_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
-    [userId, email, codeHash, expiresAt, createdAt]
+    'INSERT INTO email_verification_otps (user_id, email, code_hash, expires_at, created_at, purpose) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, email, codeHash, expiresAt, createdAt, purpose]
   );
   return get(db, 'SELECT * FROM email_verification_otps ORDER BY id DESC LIMIT 1', []);
 }
 
-async function getLatestUnexpiredOtpForUserEmail(db, { userId, email, nowIso }) {
+async function getLatestUnexpiredOtpForUserEmail(db, { userId, email, nowIso, purpose = 'email_verification' }) {
   return get(
     db,
     `SELECT * FROM email_verification_otps
-     WHERE user_id = ? AND email = ? AND expires_at > ? AND used_at IS NULL
+     WHERE user_id = ? AND email = ? AND expires_at > ? AND used_at IS NULL AND purpose = ?
      ORDER BY id DESC
      LIMIT 1`,
-    [userId, email, nowIso]
+    [userId, email, nowIso, purpose]
   );
 }
 
@@ -783,6 +798,7 @@ module.exports = {
   deleteUserRefreshTokens,
   markUserEmailVerified,
   updateUnverifiedUserCredentials,
+  updateUserPassword,
   createEmailVerificationOtp,
   getLatestUnexpiredOtpForUserEmail,
   markOtpAsUsed,

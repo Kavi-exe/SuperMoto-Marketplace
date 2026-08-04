@@ -1532,6 +1532,127 @@ function switchLoginTab(tab) {
     }
 }
 
+// ── Forgot Password Modal ─────────────────────────────────────────────────────
+let pendingResetToken = null;
+let pendingResetEmail = "";
+
+function openForgotPasswordModal() {
+    const modal = document.getElementById("forgot-password-modal-container");
+    if (!modal) return;
+
+    pendingResetToken = null;
+    pendingResetEmail = "";
+
+    const requestStep = document.getElementById("forgot-step-request");
+    const resetStep = document.getElementById("forgot-step-reset");
+    if (requestStep) requestStep.style.display = "";
+    if (resetStep) resetStep.style.display = "none";
+
+    ["forgot-pw-error", "forgot-pw-error-2"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = ""; el.classList.remove("show"); }
+    });
+    const emailInput = document.getElementById("forgot-email");
+    if (emailInput) emailInput.value = "";
+
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden";
+    setTimeout(() => emailInput?.focus(), 50);
+}
+
+function closeForgotPasswordModal() {
+    const modal = document.getElementById("forgot-password-modal-container");
+    if (modal) modal.classList.remove("active");
+    document.body.style.overflow = "";
+}
+
+function showForgotError(id, message) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message || "";
+    el.classList.toggle("show", Boolean(message));
+}
+
+async function requestPasswordReset() {
+    const emailInput = document.getElementById("forgot-email");
+    const email = emailInput?.value.trim().toLowerCase() || "";
+    const btn = document.querySelector('#forgot-step-request .forgot-pw-btn');
+
+    showForgotError("forgot-pw-error", "");
+    if (!email) {
+        showForgotError("forgot-pw-error", "Please enter your email address.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    const { response, data } = await apiFetch("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+    });
+    if (btn) btn.disabled = false;
+
+    if (!response.ok) {
+        showForgotError("forgot-pw-error", data?.error || "Something went wrong. Please try again.");
+        return;
+    }
+
+    pendingResetToken = data?.resetToken || "";
+    pendingResetEmail = email;
+
+    const requestStep = document.getElementById("forgot-step-request");
+    const resetStep = document.getElementById("forgot-step-reset");
+    if (requestStep) requestStep.style.display = "none";
+    if (resetStep) resetStep.style.display = "";
+
+    if (data?.otpCode) {
+        const hint = document.getElementById("forgot-otp-hint");
+        if (hint) {
+            hint.textContent = `Dev mode: your code is ${data.otpCode}`;
+            hint.style.display = "block";
+        }
+    }
+    setTimeout(() => document.getElementById("forgot-otp")?.focus(), 50);
+}
+
+async function submitPasswordReset() {
+    const otp = (document.getElementById("forgot-otp")?.value || "").trim();
+    const newPassword = document.getElementById("forgot-new-password")?.value || "";
+    const btn = document.querySelector('#forgot-step-reset .forgot-pw-btn');
+
+    showForgotError("forgot-pw-error-2", "");
+
+    if (!/^\d{6}$/.test(otp)) {
+        showForgotError("forgot-pw-error-2", "Enter the 6-digit code from your email.");
+        return;
+    }
+    if (newPassword.length < 8) {
+        showForgotError("forgot-pw-error-2", "Password must be at least 8 characters.");
+        return;
+    }
+    if (!pendingResetToken) {
+        showForgotError("forgot-pw-error-2", "Your reset request has expired. Please request a new code.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    const { response, data } = await apiFetch("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ resetToken: pendingResetToken, otp, newPassword }),
+    });
+    if (btn) btn.disabled = false;
+
+    if (!response.ok) {
+        showForgotError("forgot-pw-error-2", data?.error || "Something went wrong. Please try again.");
+        return;
+    }
+
+    closeForgotPasswordModal();
+    const emailInput = document.getElementById("login-email");
+    if (emailInput) emailInput.value = pendingResetEmail;
+    switchLoginTab("signin");
+    alert("Password updated successfully. You can now sign in with your new password.");
+}
+
 async function handleLogin() {
     const email = document.getElementById("login-email")?.value.trim();
     const password = document.getElementById("login-password")?.value;
