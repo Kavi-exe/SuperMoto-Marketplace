@@ -156,7 +156,7 @@
 
         setTimeout(() => {
             if (window.opener) {
-                window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', name, email }, '*');
+                window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', name, email }, window.location.origin);
             }
             window.close();
         }, 800);

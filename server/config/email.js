@@ -20,6 +20,9 @@ function getTransporter() {
   _transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass },
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 15000,
   });
 
   return _transporter;
@@ -225,15 +228,24 @@ async function sendVerificationEmail({ to, otpCode, userName }) {
 
   const fromAddress = process.env.GMAIL_USER || 'theceylonsuperhub@gmail.com';
 
-  await transporter.sendMail({
-    from: `"CeylonSuperHub" <${fromAddress}>`,
-    to,
-    subject: `${otpCode} is your CeylonSuperHub verification code`,
-    text: `Hey ${userName || 'there'},\n\nYour CeylonSuperHub verification code is: ${otpCode}\n\nThis code expires in 15 minutes.\n\nIf you didn't create an account, ignore this email.\n\n— The CeylonSuperHub Team`,
-    html: buildVerificationEmailHtml(otpCode, userName),
-  });
-
-  return { sent: true, devMode: false };
+  try {
+    await transporter.sendMail({
+      from: `"CeylonSuperHub" <${fromAddress}>`,
+      to,
+      subject: `${otpCode} is your CeylonSuperHub verification code`,
+      text: `Hey ${userName || 'there'},\n\nYour CeylonSuperHub verification code is: ${otpCode}\n\nThis code expires in 15 minutes.\n\nIf you didn't create an account, ignore this email.\n\n— The CeylonSuperHub Team`,
+      html: buildVerificationEmailHtml(otpCode, userName),
+    });
+    return { sent: true, devMode: false };
+  } catch (err) {
+    console.error('[email] Failed to send verification email:', err.message);
+    // In non-production, fall back to dev mode so local development still works.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[email:dev] OTP for ${to}: ${otpCode}`);
+      return { sent: false, devMode: true };
+    }
+    throw err;
+  }
 }
 
 module.exports = { sendVerificationEmail, isEmailConfigured };

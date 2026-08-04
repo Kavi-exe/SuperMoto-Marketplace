@@ -421,7 +421,7 @@ async function createAd(db, ad) {
       ad.description,
       JSON.stringify(ad.images || []),
       ad.publisherId || null,
-      ad.status || 'pending_payment',
+      ad.status || 'active',
       ad.dateAdded,
       ad.featured ? 1 : 0,
     ]

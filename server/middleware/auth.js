@@ -3,6 +3,16 @@ const jwt = require('jsonwebtoken');
 const ACCESS_SECRET = process.env.JWT_SECRET || 'local-dev-access-secret-change-me';
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'local-dev-refresh-secret-change-me';
 
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  console.warn('[auth] JWT secrets not configured — using insecure fallback secrets. Set JWT_SECRET and JWT_REFRESH_SECRET in production.');
+}
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET)) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET are required in production');
+}
+if (process.env.JWT_SECRET && process.env.JWT_SECRET === process.env.JWT_REFRESH_SECRET) {
+  console.warn('[auth] JWT_SECRET and JWT_REFRESH_SECRET are identical — use different values.');
+}
+
 const ACCESS_EXPIRY = '15m';
 const REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 

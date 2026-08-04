@@ -70,6 +70,7 @@ const {
   verifyRefreshToken,
   requireAuth,
   requireAdmin,
+  optionalAuth,
   REFRESH_EXPIRY_MS,
 } = require('./middleware/auth');
 
@@ -131,6 +132,17 @@ app.post(
 
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
+
+app.use((err, _req, res, next) => {
+  if (err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({ ok: false, error: 'Invalid JSON body' });
+  }
+  if (err) {
+    console.error('[json-body]', err.message);
+    return res.status(400).json({ ok: false, error: 'Invalid request body' });
+  }
+  next(err);
+});
 
 const upload = createUploadMiddleware();
 
@@ -208,11 +220,6 @@ async function hashOtp(otp) {
 async function verifyOtp(otp, hash) {
   // Compare OTP with hash using bcrypt
   return bcrypt.compare(String(otp), hash);
-}
-
-function createOtpVerificationCodeHash(otpCode) {
-  // For backward compatibility, keep this for now but use bcrypt in new code
-  return crypto.createHash('sha256').update(String(otpCode)).digest('hex');
 }
 
 app.get('/api/config/public', (_req, res) => {
@@ -488,6 +495,11 @@ app.post('/api/auth/oauth-login', async (req, res) => {
     const db = openDb();
     let user = await getUserByEmail(db, normalizedEmail);
 
+    if (user && user.status === 'disabled') {
+      db.close();
+      return res.status(403).json({ ok: false, error: 'This account has been disabled. Contact support.' });
+    }
+
     if (!user) {
       // Create account with a random unusable password hash
       const randomPassword = crypto.randomBytes(32).toString('hex');
@@ -644,6 +656,12 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
       return res.status(401).json({ ok: false, error: 'Invalid credentials' });
     }
 
+    // Reject disabled accounts
+    if (user.status === 'disabled') {
+      db.close();
+      return res.status(403).json({ ok: false, error: 'This account has been disabled. Contact support.' });
+    }
+
     // Reject unverified accounts
     if (user.email_verified !== 1) {
       db.close();
@@ -667,7 +685,8 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     }
     logDb.close();
     return res.json({ ok: true, user: publicUser(user), accessToken });
-  } catch {
+  } catch (err) {
+    console.error('[login]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -702,6 +721,11 @@ app.post('/api/auth/refresh', async (req, res) => {
     if (!user) {
       clearRefreshCookie(res);
       return res.status(401).json({ ok: false, error: 'User not found' });
+    }
+
+    if (user.status === 'disabled') {
+      clearRefreshCookie(res);
+      return res.status(401).json({ ok: false, error: 'Account disabled' });
     }
 
     const accessToken = await issueTokens(res, user);
@@ -783,7 +807,7 @@ app.get('/api/ads', async (_req, res) => {
   }
 });
 
-app.get('/api/ads/:id', async (req, res) => {
+app.get('/api/ads/:id', optionalAuth, async (req, res) => {
   try {
     const db = openDb();
     const ad = await getAdById(db, req.params.id);
@@ -798,7 +822,8 @@ app.get('/api/ads/:id', async (req, res) => {
     }
 
     return res.json({ ok: true, ad });
-  } catch {
+  } catch (err) {
+    console.error('[get-ad]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -824,14 +849,23 @@ app.post('/api/ads', requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, error: 'At least one image is required' });
     }
 
+    const price = Number(body.price);
+    const year = Number(body.year);
+    if (!Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({ ok: false, error: 'Price must be a positive number' });
+    }
+    if (!Number.isFinite(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+      return res.status(400).json({ ok: false, error: 'Year is invalid' });
+    }
+
     const ad = {
       id: `cs-custom-${Date.now()}`,
       title: `${body.make} ${body.model} ${body.year}`,
       type: body.type,
       make: body.make,
       model: body.model,
-      year: Number(body.year),
-      price: Number(body.price),
+      year,
+      price,
       location: body.location,
       mileage: Number(body.mileage) || 0,
       transmission: body.transmission || 'Automatic',
@@ -849,7 +883,7 @@ app.post('/api/ads', requireAuth, async (req, res) => {
       description: body.description,
       images,
       publisherId: req.user.id,
-      status: 'pending_payment',
+      status: 'active',
       dateAdded: new Date().toISOString().split('T')[0],
       featured: false,
     };
@@ -859,7 +893,8 @@ app.post('/api/ads', requireAuth, async (req, res) => {
     db.close();
 
     return res.status(201).json({ ok: true, ad });
-  } catch {
+  } catch (err) {
+    console.error('[create-ad]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -907,13 +942,21 @@ app.post('/api/spare-parts', requireAuth, async (req, res) => {
       return res.status(400).json({ ok: false, error: 'At least one image is required' });
     }
 
+    const price = Number(body.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({ ok: false, error: 'Price must be a positive number' });
+    }
+    if (!body.name || !body.category) {
+      return res.status(400).json({ ok: false, error: 'Name and category are required' });
+    }
+
     const part = {
       id: `spare-${Date.now()}`,
       name: body.name,
       category: body.category,
       compatible: body.compatible,
       condition: body.condition,
-      price: Number(body.price),
+      price,
       location: body.location,
       sellerName: body.sellerName,
       sellerPhone: body.sellerPhone,
@@ -928,7 +971,8 @@ app.post('/api/spare-parts', requireAuth, async (req, res) => {
     db.close();
 
     return res.status(201).json({ ok: true, sparePart: part });
-  } catch {
+  } catch (err) {
+    console.error('[create-spare-part]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
@@ -1250,13 +1294,43 @@ app.get('/api/admin/admins', requireAdmin, async (_req, res) => {
     db.close();
     return res.json({ ok: true, admins });
   } catch (err) {
+    console.error('[admin-admins]', err);
     return res.status(500).json({ ok: false, error: 'Server error' });
   }
 });
 
-app.use(express.static(ROOT_DIR));
+app.get('/api/health', (_req, res) => {
+  let dbOk = true;
+  try {
+    const db = openDb();
+    db.close();
+  } catch {
+    dbOk = false;
+  }
+  res.json({ ok: true, status: 'healthy', db: dbOk ? 'ok' : 'error', time: new Date().toISOString() });
+});
+
+app.use(
+  express.static(ROOT_DIR, {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  })
+);
 app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(ROOT_DIR, 'main.html'));
+});
+
+// Final error handler — log anything that slips through
+app.use((err, _req, res, _next) => {
+  console.error('[unhandled-error]', err);
+  if (!res.headersSent) {
+    res.status(500).json({ ok: false, error: 'Server error' });
+  }
 });
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -1281,3 +1355,12 @@ initSchema()
     console.error('Failed to init DB', e);
     process.exit(1);
   });
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+  process.exit(1);
+});

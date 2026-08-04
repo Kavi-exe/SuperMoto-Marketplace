@@ -1,6 +1,6 @@
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = window.location.origin + '/api';
 const OTP_EXPIRATION_SECONDS = 15 * 60; // 15 minutes
 
 // ── State Management ───────────────────────────────────────────────────────

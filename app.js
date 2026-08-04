@@ -597,10 +597,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 // Database Init
 function initDatabase() {
+    function safeParse(value, fallback) {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
     // Check if ads already exist in localStorage
     const savedAds = localStorage.getItem("ceylonsuper_ads");
     if (savedAds) {
-        ads = JSON.parse(savedAds);
+        ads = safeParse(savedAds, [...PRELOADED_ADS]);
+        localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
     } else {
         ads = [...PRELOADED_ADS];
         localStorage.setItem("ceylonsuper_ads", JSON.stringify(ads));
@@ -609,7 +619,8 @@ function initDatabase() {
     // Check favorites
     const savedFavs = localStorage.getItem("ceylonsuper_favorites");
     if (savedFavs) {
-        favorites = JSON.parse(savedFavs);
+        favorites = safeParse(savedFavs, []);
+        localStorage.setItem("ceylonsuper_favorites", JSON.stringify(favorites));
     } else {
         favorites = [];
         localStorage.setItem("ceylonsuper_favorites", JSON.stringify(favorites));
@@ -618,7 +629,8 @@ function initDatabase() {
     // Check spare parts
     const savedSpareParts = localStorage.getItem("ceylonsuper_spare_parts");
     if (savedSpareParts) {
-        spareParts = JSON.parse(savedSpareParts);
+        spareParts = safeParse(savedSpareParts, []);
+        localStorage.setItem("ceylonsuper_spare_parts", JSON.stringify(spareParts));
     } else {
         spareParts = [];
         localStorage.setItem("ceylonsuper_spare_parts", JSON.stringify(spareParts));
@@ -627,7 +639,22 @@ function initDatabase() {
     // Initialize Profile
     const savedProfile = localStorage.getItem("ceylonsuper_profile");
     if (savedProfile) {
-        profile = JSON.parse(savedProfile);
+        try {
+            profile = JSON.parse(savedProfile);
+        } catch {
+            profile = null;
+        }
+        if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+            profile = {
+                name: "",
+                phone: "",
+                email: "",
+                location: "",
+                bio: "",
+                avatar: ""
+            };
+            localStorage.setItem("ceylonsuper_profile", JSON.stringify(profile));
+        }
     } else {
         profile = {
             name: "",
@@ -643,7 +670,20 @@ function initDatabase() {
     // Initialize Settings
     const savedSettings = localStorage.getItem("ceylonsuper_settings");
     if (savedSettings) {
-        settings = JSON.parse(savedSettings);
+        try {
+            settings = JSON.parse(savedSettings);
+        } catch {
+            settings = null;
+        }
+        if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+            settings = {
+                theme: "dark",
+                accent: "blue",
+                emailNotifications: true,
+                publicProfile: true
+            };
+            localStorage.setItem("ceylonsuper_settings", JSON.stringify(settings));
+        }
         // Migrate old default crimson accent to blue
         if (settings.accent === "crimson") {
             settings.accent = "blue";
@@ -1119,6 +1159,7 @@ function bindEvents() {
 
     // Listen for Google OAuth popup callback
     window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
         if (event.data?.type === "GOOGLE_AUTH_SUCCESS") {
             handleGoogleAuthSuccess(event.data);
         }
@@ -1626,7 +1667,11 @@ async function handleRegister() {
 }
 
 async function handleLogout() {
-    await apiFetch("/api/auth/logout", { method: "POST" });
+    try {
+        await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+        // Ignore network errors — still clear local session state.
+    }
     setAccessToken("");
     currentUser = null;
     updateAuthUI();
@@ -1960,7 +2005,7 @@ function renderSparePartsList() {
 
     container.innerHTML = spareParts.map(part => {
         const thumb = part.images && part.images[0]
-            ? `<img src="${part.images[0]}" alt="${part.name}" class="spare-part-thumb">`
+            ? `<img src="${escapeHtml(part.images[0])}" alt="${escapeHtml(part.name)}" class="spare-part-thumb">`
             : "";
         const isOwner = currentUser && part.publisherId === currentUser.id;
         const deleteBtn = isOwner
@@ -1971,18 +2016,18 @@ function renderSparePartsList() {
         <article class="spare-part-card ${thumb ? "spare-part-card-with-img" : ""}">
             ${thumb}
             <div>
-                <div class="spare-part-title">${part.name}</div>
+                <div class="spare-part-title">${escapeHtml(part.name)}</div>
                 <div class="spare-part-meta">
-                    <span><i class="fas fa-tag"></i> ${part.category}</span>
-                    <span><i class="fas fa-car-side"></i> ${part.compatible}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${part.location}</span>
+                    <span><i class="fas fa-tag"></i> ${escapeHtml(part.category)}</span>
+                    <span><i class="fas fa-car-side"></i> ${escapeHtml(part.compatible)}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(part.location)}</span>
                 </div>
-                <p>${part.description}</p>
+                <p>${escapeHtml(part.description)}</p>
             </div>
             <div class="spare-part-side spare-part-actions">
-                <span class="spare-part-condition">${part.condition}</span>
+                <span class="spare-part-condition">${escapeHtml(part.condition)}</span>
                 <strong>${formatPriceLKR(part.price)}</strong>
-                <a href="tel:${part.sellerPhone}" class="btn-my-ad-action">
+                <a href="tel:${escapeHtml(part.sellerPhone)}" class="btn-my-ad-action">
                     <i class="fas fa-phone"></i> Contact
                 </a>
                 ${deleteBtn}
@@ -2067,9 +2112,9 @@ function renderMyAdsList() {
         const card = document.createElement("div");
         card.className = "my-ad-card";
         card.innerHTML = `
-            <img src="${ad.images[0]}" alt="${ad.title}" class="my-ad-img">
+            <img src="${escapeHtml(ad.images[0])}" alt="${escapeHtml(ad.title)}" class="my-ad-img">
             <div class="my-ad-info">
-                <div class="my-ad-title">${ad.title}</div>
+                <div class="my-ad-title">${escapeHtml(ad.title)}</div>
                 <div class="my-ad-price">${formatPriceLKR(ad.price)}</div>
             </div>
             <div class="my-ad-actions">
@@ -2109,9 +2154,9 @@ function renderMySparePartsList() {
         card.className = "my-ad-card";
         const img = part.images && part.images[0] ? part.images[0] : "";
         card.innerHTML = `
-            ${img ? `<img src="${img}" alt="${part.name}" class="my-ad-img">` : `<div class="my-ad-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)"><i class="fas fa-cogs"></i></div>`}
+            ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(part.name)}" class="my-ad-img">` : `<div class="my-ad-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary)"><i class="fas fa-cogs"></i></div>`}
             <div class="my-ad-info">
-                <div class="my-ad-title">${part.name}</div>
+                <div class="my-ad-title">${escapeHtml(part.name)}</div>
                 <div class="my-ad-price">${formatPriceLKR(part.price)}</div>
             </div>
             <div class="my-ad-actions">
@@ -2416,7 +2461,7 @@ function renderListings() {
         const cardHtml = `
             <div class="card-inner-flex">
                 <div class="card-img-wrapper" onclick="openDetailsModal('${ad.id}')">
-                    <img class="card-img" src="${ad.images[0]}" alt="${ad.title}" loading="lazy">
+                    <img class="card-img" src="${escapeHtml(ad.images[0])}" alt="${escapeHtml(ad.title)}" loading="lazy">
                 </div>
                 <button class="card-fav-btn ${isFav ? 'active' : ''}" onclick="toggleFavorite(event, '${ad.id}')" title="${isFav ? 'Remove from Watchlist' : 'Add to Watchlist'}">
                     <i class="fa${isFav ? 's' : 'r'} fa-heart"></i>
@@ -2424,25 +2469,25 @@ function renderListings() {
                 <div class="card-info">
                     <div>
                         <div class="card-header-row">
-                            <h3 class="card-title" onclick="openDetailsModal('${ad.id}')" style="cursor:pointer">${ad.title}</h3>
+                            <h3 class="card-title" onclick="openDetailsModal('${ad.id}')" style="cursor:pointer">${escapeHtml(ad.title)}</h3>
                             <div class="card-price-container">
                                 <div class="card-price-lkr">${formatPriceLKR(ad.price)}</div>
                                 <div class="card-price-usd">${formatPriceUSD(ad.price)}</div>
                             </div>
                         </div>
                         <div class="card-meta-line">
-                            <div class="card-meta-item"><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
+                            <div class="card-meta-item"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(ad.location)}</div>
                             <div class="card-meta-item"><i class="far fa-calendar-alt"></i> ${ad.year}</div>
                             <div class="card-meta-item"><i class="fas fa-tachometer-alt"></i> ${ad.mileage.toLocaleString()} km</div>
-                            <div class="card-meta-item"><span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}">${ad.type}</span></div>
+                            <div class="card-meta-item"><span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}">${escapeHtml(ad.type)}</span></div>
                         </div>
-                        <p class="card-description">${ad.description}</p>
+                        <p class="card-description">${escapeHtml(ad.description)}</p>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
                         <div class="card-spec-badges">
-                            <span class="card-spec-badge">${ad.engine}</span>
-                            <span class="card-spec-badge">${ad.transmission}</span>
-                            <span class="card-spec-badge">${ad.condition}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.engine)}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.transmission)}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.condition)}</span>
                         </div>
                         <button class="btn-post" style="padding: 6px 14px; font-size: 0.8rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none" onclick="openDetailsModal('${ad.id}')">View Details</button>
                     </div>
@@ -2488,7 +2533,7 @@ function renderFavorites() {
         const cardHtml = `
             <div class="card-inner-flex">
                 <div class="card-img-wrapper" onclick="openDetailsModal('${ad.id}')">
-                    <img class="card-img" src="${ad.images[0]}" alt="${ad.title}" loading="lazy">
+                    <img class="card-img" src="${escapeHtml(ad.images[0])}" alt="${escapeHtml(ad.title)}" loading="lazy">
                 </div>
                 <button class="card-fav-btn active" onclick="toggleFavorite(event, '${ad.id}')" title="Remove from Watchlist">
                     <i class="fas fa-heart"></i>
@@ -2496,25 +2541,25 @@ function renderFavorites() {
                 <div class="card-info">
                     <div>
                         <div class="card-header-row">
-                            <h3 class="card-title" onclick="openDetailsModal('${ad.id}')" style="cursor:pointer">${ad.title}</h3>
+                            <h3 class="card-title" onclick="openDetailsModal('${ad.id}')" style="cursor:pointer">${escapeHtml(ad.title)}</h3>
                             <div class="card-price-container">
                                 <div class="card-price-lkr">${formatPriceLKR(ad.price)}</div>
                                 <div class="card-price-usd">${formatPriceUSD(ad.price)}</div>
                             </div>
                         </div>
                         <div class="card-meta-line">
-                            <div class="card-meta-item"><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
+                            <div class="card-meta-item"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(ad.location)}</div>
                             <div class="card-meta-item"><i class="far fa-calendar-alt"></i> ${ad.year}</div>
                             <div class="card-meta-item"><i class="fas fa-tachometer-alt"></i> ${ad.mileage.toLocaleString()} km</div>
-                            <div class="card-meta-item"><span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}">${ad.type}</span></div>
+                            <div class="card-meta-item"><span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}">${escapeHtml(ad.type)}</span></div>
                         </div>
-                        <p class="card-description">${ad.description}</p>
+                        <p class="card-description">${escapeHtml(ad.description)}</p>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
                         <div class="card-spec-badges">
-                            <span class="card-spec-badge">${ad.engine}</span>
-                            <span class="card-spec-badge">${ad.transmission}</span>
-                            <span class="card-spec-badge">${ad.condition}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.engine)}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.transmission)}</span>
+                            <span class="card-spec-badge">${escapeHtml(ad.condition)}</span>
                         </div>
                         <button class="btn-post" style="padding: 6px 14px; font-size: 0.8rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none" onclick="openDetailsModal('${ad.id}')">View Details</button>
                     </div>
@@ -2584,8 +2629,8 @@ function openDetailsModal(id) {
     let imageGalleryHtml = "";
     ad.images.forEach((img, index) => {
         imageGalleryHtml += `
-            <div class="thumbnail-img ${index === 0 ? 'active' : ''}" onclick="changeDetailImage('${img}', this)">
-                <img src="${img}" alt="${ad.title}">
+            <div class="thumbnail-img ${index === 0 ? 'active' : ''}" onclick='changeDetailImage(${JSON.stringify(img)}, this)'>
+                <img src="${escapeHtml(img)}" alt="${escapeHtml(ad.title)}">
             </div>
         `;
     });
@@ -2593,7 +2638,7 @@ function openDetailsModal(id) {
     body.innerHTML = `
         <div class="details-gallery">
             <div class="main-image-container">
-                <img id="detail-main-img" src="${ad.images[0]}" alt="${ad.title}">
+                <img id="detail-main-img" src="${escapeHtml(ad.images[0])}" alt="${escapeHtml(ad.title)}">
             </div>
             <div class="thumbnails-container">
                 ${imageGalleryHtml}
@@ -2601,25 +2646,25 @@ function openDetailsModal(id) {
         </div>
         <div class="details-content-grid">
             <div class="vehicle-desc-section">
-                <span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}" style="font-size:0.8rem; margin-bottom:10px">${ad.type}</span>
-                <h2>${ad.title}</h2>
+                <span class="badge ${ad.type === 'supercar' ? 'badge-orange' : 'badge-cyan'}" style="font-size:0.8rem; margin-bottom:10px">${escapeHtml(ad.type)}</span>
+                <h2>${escapeHtml(ad.title)}</h2>
                 <div class="vehicle-spec-header-meta">
-                    <div><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
-                    <div><i class="far fa-clock"></i> Posted on ${ad.dateAdded}</div>
+                    <div><i class="fas fa-map-marker-alt"></i> ${escapeHtml(ad.location)}</div>
+                    <div><i class="far fa-clock"></i> Posted on ${escapeHtml(ad.dateAdded)}</div>
                     <div><i class="fas fa-eye"></i> 142 Views</div>
                 </div>
-                <div class="vehicle-description-text">${ad.description}</div>
+                <div class="vehicle-description-text">${escapeHtml(ad.description)}</div>
                 
                 <div class="specs-table-wrapper">
                     <div class="specs-table-title">Full Vehicle Specifications</div>
                     <table class="specs-table">
                         <tr>
                             <td class="label-col">Make / Brand</td>
-                            <td class="value-col">${ad.make}</td>
+                            <td class="value-col">${escapeHtml(ad.make)}</td>
                         </tr>
                         <tr>
                             <td class="label-col">Model</td>
-                            <td class="value-col">${ad.model}</td>
+                            <td class="value-col">${escapeHtml(ad.model)}</td>
                         </tr>
                         <tr>
                             <td class="label-col">Year of Manufacture</td>
@@ -2631,26 +2676,26 @@ function openDetailsModal(id) {
                         </tr>
                         <tr>
                             <td class="label-col">Condition</td>
-                            <td class="value-col">${ad.condition}</td>
+                            <td class="value-col">${escapeHtml(ad.condition)}</td>
                         </tr>
                         <tr>
                             <td class="label-col">Gearbox / Transmission</td>
-                            <td class="value-col">${ad.transmission}</td>
+                            <td class="value-col">${escapeHtml(ad.transmission)}</td>
                         </tr>
                         <tr>
                             <td class="label-col">Fuel Type</td>
-                            <td class="value-col">${ad.fuel}</td>
+                            <td class="value-col">${escapeHtml(ad.fuel)}</td>
                         </tr>
                         <tr>
                             <td class="label-col">Engine Capacity</td>
-                            <td class="value-col">${ad.engine}</td>
+                            <td class="value-col">${escapeHtml(ad.engine)}</td>
                         </tr>
-                        ${ad.power ? `<tr><td class="label-col">Engine Power</td><td class="value-col">${ad.power}</td></tr>` : ''}
-                        ${ad.topSpeed ? `<tr><td class="label-col">Top Speed</td><td class="value-col">${ad.topSpeed} km/h</td></tr>` : ''}
-                        ${ad.zeroToHundred ? `<tr><td class="label-col">0 - 100 km/h</td><td class="value-col">${ad.zeroToHundred}</td></tr>` : ''}
+                        ${ad.power ? `<tr><td class="label-col">Engine Power</td><td class="value-col">${escapeHtml(ad.power)}</td></tr>` : ''}
+                        ${ad.topSpeed ? `<tr><td class="label-col">Top Speed</td><td class="value-col">${escapeHtml(ad.topSpeed)} km/h</td></tr>` : ''}
+                        ${ad.zeroToHundred ? `<tr><td class="label-col">0 - 100 km/h</td><td class="value-col">${escapeHtml(ad.zeroToHundred)}</td></tr>` : ''}
                         <tr>
                             <td class="label-col">Duty Status</td>
-                            <td class="value-col">${ad.dutyStatus}</td>
+                            <td class="value-col">${escapeHtml(ad.dutyStatus)}</td>
                         </tr>
                     </table>
                 </div>
@@ -2667,14 +2712,14 @@ function openDetailsModal(id) {
                         </div>
                         <div>
                             <div class="seller-name">
-                                ${ad.sellerName} 
+                                ${escapeHtml(ad.sellerName)} 
                                 <i class="fas fa-check-circle" style="color:var(--accent-cyan); font-size:0.85rem" title="Verified Seller"></i>
                             </div>
                             <div class="seller-role">Verified CeylonSuper Agent</div>
                         </div>
                     </div>
                     
-                    <button class="contact-action-btn btn-call" id="reveal-phone-btn" onclick="revealSellerPhone('${ad.sellerPhone}')">
+                    <button class="contact-action-btn btn-call" id="reveal-phone-btn" onclick='revealSellerPhone(${JSON.stringify(ad.sellerPhone)})'>
                         <i class="fas fa-phone-alt"></i> Reveal Contact Number
                     </button>
                     
@@ -2708,7 +2753,11 @@ function changeDetailImage(src, element) {
 function revealSellerPhone(phone) {
     const btn = document.getElementById("reveal-phone-btn");
     if (btn) {
-        btn.innerHTML = `<i class="fas fa-phone-alt"></i> ${phone}`;
+        btn.textContent = "";
+        const icon = document.createElement("i");
+        icon.className = "fas fa-phone-alt";
+        btn.appendChild(icon);
+        btn.appendChild(document.createTextNode(` ${phone}`));
         btn.style.boxShadow = "var(--shadow-neon-cyan)";
         btn.style.background = "var(--accent-cyan-gradient)";
         btn.style.color = "#070809";
@@ -3352,8 +3401,8 @@ async function adminLoadDashboard() {
             <div class="admin-activity-item">
                 <div class="admin-activity-dot"></div>
                 <div class="admin-activity-content">
-                    <span class="admin-activity-action">${a.action}</span>
-                    <span class="admin-activity-desc">${a.description || ''}</span>
+                    <span class="admin-activity-action">${escapeHtml(a.action)}</span>
+                    <span class="admin-activity-desc">${escapeHtml(a.description || '')}</span>
                     <span class="admin-activity-time">${new Date(a.created_at).toLocaleString()}</span>
                 </div>
             </div>
@@ -3537,11 +3586,11 @@ async function adminLoadPending() {
     empty.style.display = "none";
     tbody.innerHTML = data.listings.map(ad => `
         <tr>
-            <td><strong>${escapeHtml(ad.title)}</strong> ${ad.make} ${ad.model}</td>
+            <td><strong>${escapeHtml(ad.title)}</strong> ${escapeHtml(ad.make)} ${escapeHtml(ad.model)}</td>
             <td>${escapeHtml(ad.sellerName)}</td>
-            <td><span class="admin-badge admin-badge-info">${ad.type}</span></td>
+            <td><span class="admin-badge admin-badge-info">${escapeHtml(ad.type)}</span></td>
             <td>LKR ${(ad.price / 10000000).toFixed(1)}Cr</td>
-            <td>${ad.dateAdded || '-'}</td>
+            <td>${escapeHtml(ad.dateAdded || '-')}</td>
             <td class="admin-actions-cell">
                 <button class="admin-btn-sm admin-btn-success" onclick="adminApproveListing('${ad.id}')"><i class="fas fa-check"></i> Approve</button>
                 <button class="admin-btn-sm admin-btn-danger" onclick="adminRejectListing('${ad.id}')"><i class="fas fa-times"></i> Reject</button>

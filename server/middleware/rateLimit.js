@@ -59,4 +59,16 @@ function resetLoginAttempts(req) {
   loginAttempts.delete(getClientIp(req));
 }
 
+function pruneExpired() {
+  const now = Date.now();
+  for (const [ip, record] of loginAttempts) {
+    if (now - record.windowStart > WINDOW_MS) loginAttempts.delete(ip);
+  }
+  for (const [ip, record] of otpAttempts) {
+    if (now - record.windowStart > WINDOW_MS) otpAttempts.delete(ip);
+  }
+}
+
+setInterval(pruneExpired, WINDOW_MS).unref();
+
 module.exports = { loginRateLimiter, otpVerifyRateLimiter, resetLoginAttempts };
