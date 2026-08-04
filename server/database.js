@@ -56,6 +56,7 @@ async function initSchema() {
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'user',
       email_verified INTEGER NOT NULL DEFAULT 0,
+      auth_method TEXT NOT NULL DEFAULT 'password',
       created_at TEXT NOT NULL
     )`
   );
@@ -170,6 +171,10 @@ async function migrateSchema(db) {
     await run(db, "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
   }
 
+  if (!colNames.has('auth_method')) {
+    await run(db, "ALTER TABLE users ADD COLUMN auth_method TEXT NOT NULL DEFAULT 'password'");
+  }
+
   if (!colNames.has('verification_failed_attempts')) {
     await run(db, "ALTER TABLE users ADD COLUMN verification_failed_attempts INTEGER NOT NULL DEFAULT 0");
   }
@@ -257,12 +262,12 @@ async function getUserById(db, id) {
   return get(db, 'SELECT * FROM users WHERE id = ?', [id]);
 }
 
-async function createUser(db, { name, email, passwordHash, emailVerified = 0 }) {
+async function createUser(db, { name, email, passwordHash, emailVerified = 0, authMethod = 'password' }) {
   const createdAt = new Date().toISOString();
   await run(
     db,
-    'INSERT INTO users (name, email, password_hash, role, email_verified, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    [name, email, passwordHash, 'user', emailVerified ? 1 : 0, createdAt]
+    'INSERT INTO users (name, email, password_hash, role, email_verified, auth_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [name, email, passwordHash, 'user', emailVerified ? 1 : 0, authMethod, createdAt]
   );
   return getUserByEmail(db, email);
 }

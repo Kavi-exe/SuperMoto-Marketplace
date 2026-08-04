@@ -514,6 +514,14 @@ app.post('/api/auth/oauth-login', async (req, res) => {
       return res.status(403).json({ ok: false, error: 'This account has been disabled. Contact support.' });
     }
 
+    if (user && user.auth_method === 'password') {
+      db.close();
+      return res.status(409).json({
+        ok: false,
+        error: 'An account with this email already exists. Please sign in with your password.',
+      });
+    }
+
     if (!user) {
       // Create account with a random unusable password hash
       const randomPassword = crypto.randomBytes(32).toString('hex');
@@ -522,6 +530,7 @@ app.post('/api/auth/oauth-login', async (req, res) => {
         name: String(name).trim(),
         email: normalizedEmail,
         passwordHash,
+        authMethod: 'oauth',
       });
     }
 
