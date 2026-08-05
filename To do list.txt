@@ -1,0 +1,20 @@
+Here's the prioritized launch checklist based on the current state:
+1. Critical — do these BEFORE anything else
+- Rotate every credential still in public git history. The repo is public and old server/.env values (Cloudinary, Stripe, Gmail, MongoDB Atlas) are recoverable from commits 427ecd8/a15e053/6f9d67f. Regenerate all of them in the dashboards and update .env. JWT secrets are already rotated.
+- Close the origin: true CORS (server/index.js:99). It reflects any origin with cookies — change to the real production domain(s) before deploying.
+- Real Google sign-in. The current "Sign in with Google" is a fake form (google_oauth.html → email lookup). Either implement real Google OAuth (ID-token verification) or remove the option before launch.
+- Run as NODE_ENV=production on the server so dev-only fallbacks stop: OTP codes printed to the server console (register + forgot-password), and email dev-mode.
+2. Must-do for a real deployment
+- Server + HTTPS: deploy to a VPS/host, register the domain, install a TLS cert (Let's Encrypt), and ensure req.secure is true behind a proxy so HSTS actually engages. Verify HSTS via curl once live.
+- Stripe live mode: switch STRIPE_SECRET_KEY/publishable key to live, set a real webhook endpoint with a signed STRIPE_WEBHOOK_SECRET (the constructEvent code is already correct), and test a real payment + webhook.
+- Production email: confirm Gmail SMTP actually delivers in production (it times out in this dev environment). Set GMAIL_USER + a fresh App Password.
+- Scheduled backups: npm run backup works — wire it to cron daily on the server and test a restore at least once.
+- Admin account + monitoring: run create-admin.js, add an uptime check on /api/health, and a pm2 resurrect/pm2 startup config so the app survives reboots.
+- Verify email-domain allowlist for registration (isEmailDomainAllowed) matches who you want to allow.
+3. Recommended before launch
+- Automated tests. CI currently only syntax-checks and smoke-tests. Add a few tests for the auth/OTP/payment/forgot-password flows so launch regressions are caught.
+- Security pass: check multer upload limits on Cloudinary, brute-force limits on login/OTP (exists), and basic XSS/input validation on the ad forms.
+- Legal pages: Privacy Policy, Terms, Refund policy — marketplace payment disputes need them.
+- Clean-up content: real brand logos/seller info, correct currency/pricing display, remove the leftover test users' artifacts if any.
+4. Already done
+Security headers + CSP (incl. the data: fix), PM2 config, backup script, CI, OAuth takeover fix, JWT rotation, MONGODB_URI removal, and forgot-password (working, still uncommitted — should be committed/pushed when you're ready).
